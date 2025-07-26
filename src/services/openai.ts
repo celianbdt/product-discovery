@@ -109,17 +109,22 @@ export async function generateMarketAnalysis(context: ConversationContext): Prom
   hypothesis: string;
 }> {
   try {
+    // Extract the actual problem from context - prioritize problemDescription, then productIdea
+    const actualProblem = context.problemDescription || context.productIdea || 'Product validation challenge';
+    const actualTarget = context.targetAudience || 'General users';
+    
     // Détermine si c'est B2B ou B2C basé sur le contexte
-    const isB2B = context.targetAudience?.toLowerCase().includes('business') || 
-                  context.targetAudience?.toLowerCase().includes('professional') ||
-                  context.targetAudience?.toLowerCase().includes('company') ||
-                  context.productIdea?.toLowerCase().includes('saas') ||
-                  context.productIdea?.toLowerCase().includes('enterprise');
+    const isB2B = actualTarget.toLowerCase().includes('business') || 
+                  actualTarget.toLowerCase().includes('professional') ||
+                  actualTarget.toLowerCase().includes('company') ||
+                  actualProblem.toLowerCase().includes('saas') ||
+                  actualProblem.toLowerCase().includes('enterprise') ||
+                  actualProblem.toLowerCase().includes('b2b');
 
     // Lance le pipeline de recherche complet
     const researchResults = await runCompleteResearchPipeline(
-      context.problemDescription || context.productIdea || 'Product validation challenge',
-      context.targetAudience || 'General users',
+      actualProblem,
+      actualTarget,
       isB2B
     );
 
@@ -143,9 +148,9 @@ export async function generateMarketAnalysis(context: ConversationContext): Prom
     }));
   const analysisPrompt = `Based on the following product information, generate a comprehensive market analysis for user research and validation:
 
-Product Idea: ${context.productIdea}
-Target Audience: ${context.targetAudience}
-Problem Description: ${context.problemDescription}
+Product Idea: ${context.productIdea || 'Not specified'}
+Target Audience: ${actualTarget}
+Problem Description: ${actualProblem}
 Resources: ${context.resources?.join(', ') || 'None provided'}
 Research Insights: ${JSON.stringify(researchResults.insights)}
 

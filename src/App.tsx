@@ -77,6 +77,12 @@ function App() {
   const [inboundContent, setInboundContent] = useState<InboundContent[]>([]);
   const [outreachMessages, setOutreachMessages] = useState<OutreachMessage[]>([]);
   const [currentHypothesis, setCurrentHypothesis] = useState('');
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState({
+    step: '',
+    progress: 0,
+    completed: [] as string[]
+  });
 
 
   const [prospects] = useState<Prospect[]>([
@@ -170,18 +176,42 @@ function App() {
       if (result.shouldProceedToAnalysis) {
         // Generate full market analysis
         addMessage('ai', 'Perfect! I have enough information. Let me analyze your market and generate validation strategies...');
+        setIsGeneratingAnalysis(true);
+        setAnalysisProgress({ step: 'Starting analysis...', progress: 10, completed: [] });
+        
         setTimeout(async () => {
           try {
+            // Step 1: Generate problem variations
+            setAnalysisProgress({ step: 'Generating problem variations...', progress: 20, completed: [] });
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Step 2: Search discussions
+            setAnalysisProgress({ step: 'Searching relevant discussions...', progress: 40, completed: ['Problem variations'] });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Step 3: Analyze insights
+            setAnalysisProgress({ step: 'Analyzing user insights...', progress: 60, completed: ['Problem variations', 'Discussion search'] });
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Step 4: Generate content
+            setAnalysisProgress({ step: 'Creating validation content...', progress: 80, completed: ['Problem variations', 'Discussion search', 'User insights'] });
+            
             const analysis = await generateMarketAnalysis(result.updatedContext);
+            
+            setAnalysisProgress({ step: 'Finalizing analysis...', progress: 100, completed: ['Problem variations', 'Discussion search', 'User insights', 'Validation content'] });
+            
             setIcps(analysis.icps);
             setDiscussions(analysis.discussions);
             setInboundContent(analysis.inboundContent);
             setOutreachMessages(analysis.outreachMessages);
             setCurrentHypothesis(analysis.hypothesis);
+            
+            setIsGeneratingAnalysis(false);
             setCurrentView('dashboard');
           } catch (error) {
             console.error('Analysis generation failed:', error);
             addMessage('ai', 'I encountered an issue generating the full analysis. Let me try a different approach.');
+            setIsGeneratingAnalysis(false);
           }
         }, 1000);
       }
@@ -309,6 +339,60 @@ function App() {
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-black"></div>
             <span className="text-sm text-gray-600">AI is analyzing...</span>
+          </div>
+        </div>
+      )}
+
+      {isGeneratingAnalysis && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-black mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Market Analysis</h3>
+              <p className="text-sm text-gray-600">{analysisProgress.step}</p>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div className="flex justify-between text-xs text-gray-500 mb-2">
+                <span>Progress</span>
+                <span>{analysisProgress.progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-black h-2 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${analysisProgress.progress}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* Completed Steps */}
+            <div className="space-y-2">
+              {['Problem variations', 'Discussion search', 'User insights', 'Validation content'].map((step, index) => (
+                <div key={step} className="flex items-center space-x-3">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                    analysisProgress.completed.includes(step) 
+                      ? 'bg-green-500 text-white' 
+                      : analysisProgress.step.toLowerCase().includes(step.toLowerCase())
+                        ? 'bg-black text-white animate-pulse'
+                        : 'bg-gray-200'
+                  }`}>
+                    {analysisProgress.completed.includes(step) && (
+                      <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-sm ${
+                    analysisProgress.completed.includes(step) 
+                      ? 'text-green-600 font-medium' 
+                      : 'text-gray-600'
+                  }`}>
+                    {step}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
