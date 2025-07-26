@@ -1,10 +1,5 @@
-import OpenAI from 'openai';
 import { searchWithGoogleDorks, PLATFORM_CONFIG, B2B_PLATFORMS, B2C_PLATFORMS } from './serpApi';
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+import { generateProblemVariations, generateResearchInsights } from './anthropic';
 
 interface ProblemVariation {
   text: string;
@@ -33,67 +28,6 @@ interface ResearchInsights {
   keyInsights: string[];
 }
 
-export async function generateProblemVariations(originalProblem: string): Promise<ProblemVariation[]> {
-  const prompt = `Génère 20 variations TRÈS DIFFÉRENTES de cette problématique pour la recherche utilisateur :
-
-Problématique originale : "${originalProblem}"
-
-Instructions :
-- Utilise des synonymes techniques et le vocabulaire du domaine
-- Crée des questions utilisateur ("How to...", "Why...", "What tool...")
-- Explore les problèmes connexes et sous-problèmes
-- Varie la complexité (débutant à expert)
-- Inclus des formulations négatives et positives
-- Pense aux différents angles d'approche
-
-Format JSON requis :
-{
-  "variations": [
-    {
-      "text": "variation de la problématique",
-      "reasoning": "pourquoi cette variation est pertinente",
-      "type": "question|statement|pain_point"
-    }
-  ]
-}
-
-Retourne UNIQUEMENT le JSON, pas d'autre texte.`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.8,
-      max_tokens: 2000
-    });
-
-    const response = completion.choices[0]?.message?.content || '';
-    const cleanedResponse = response.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = JSON.parse(cleanedResponse);
-    
-    return parsed.variations || [];
-  } catch (error) {
-    console.error('Error generating variations:', error);
-    // Fallback variations
-    return [
-      {
-        text: originalProblem,
-        reasoning: "Original problem statement",
-        type: "statement"
-      },
-      {
-        text: `How to solve ${originalProblem.toLowerCase()}`,
-        reasoning: "Question format for user searches",
-        type: "question"
-      },
-      {
-        text: `Why is ${originalProblem.toLowerCase()} a problem`,
-        reasoning: "Understanding the root cause",
-        type: "question"
-      }
-    ];
-  }
-}
 
 export function calculateAdvancedScore(
   content: string, 
@@ -241,53 +175,6 @@ function generateEngagementMetrics(): string {
   return `${likes} likes, ${comments} comments${shares > 0 ? `, ${shares} shares` : ''}`;
 }
 
-export async function generateResearchInsights(
-  discussions: DiscussionResult[],
-  originalProblem: string
-): Promise<ResearchInsights> {
-  const prompt = `Analyse ces discussions utilisateur et génère des insights pour la recherche utilisateur :
-
-Problématique : "${originalProblem}"
-
-Discussions trouvées :
-${discussions.map(d => `[${d.platform}] ${d.title}\n${d.content}`).join('\n\n')}
-
-Génère un JSON avec :
-{
-  "overview": "Résumé général (2-3 phrases)",
-  "painPoints": ["Point de douleur 1", "Point de douleur 2", "Point de douleur 3"],
-  "segments": ["Segment utilisateur 1", "Segment utilisateur 2", "Segment utilisateur 3"],
-  "opportunities": ["Opportunité business 1", "Opportunité business 2"],
-  "sentiment": "negative|positive|neutral",
-  "keyInsights": ["Insight clé 1", "Insight clé 2", "Insight clé 3"]
-}
-
-Retourne UNIQUEMENT le JSON, pas d'autre texte.`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 1500
-    });
-
-    const response = completion.choices[0]?.message?.content || '';
-    const cleanedResponse = response.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(cleanedResponse);
-  } catch (error) {
-    console.error('Error generating insights:', error);
-    // Fallback insights
-    return {
-      overview: "Analysis of user discussions reveals common patterns and pain points related to the problem.",
-      painPoints: ["Current solutions are inadequate", "Process is time-consuming", "Lack of proper tools"],
-      segments: ["Early adopters", "Professional users", "Casual users"],
-      opportunities: ["Streamline the process", "Provide better tools"],
-      sentiment: "negative",
-      keyInsights: ["Users are actively seeking solutions", "Market demand exists", "Competition is limited"]
-    };
-  }
-}
 
 export async function runCompleteResearchPipeline(
   originalProblem: string,

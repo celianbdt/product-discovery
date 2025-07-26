@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { analyzeUserInput, generateMarketAnalysis, ConversationContext } from './services/openai';
+import { analyzeUserInput, generateMarketAnalysis, ConversationContext } from './services/anthropic';
 import Chat from './components/Chat';
 import Dashboard from './components/Dashboard';
 import IterateModal from './components/IterateModal';
@@ -138,6 +138,12 @@ function App() {
   ]);
 
   const handleResourceUpload = (files: FileList | null, urls: string[]) => {
+    // Reset conversation context when new resources are uploaded
+    setConversationContext({
+      stage: 'initial',
+      messageCount: 0
+    });
+    
     const resourceInfo = [];
     const resources = [];
     
@@ -158,11 +164,29 @@ function App() {
         resources: [...(prev.resources || []), ...resources]
       }));
       addMessage('user', `Resources added: ${resourceInfo.join(', ')}`);
-      addMessage('ai', 'Resources received! I\'ll analyze these along with your product idea. Please describe your product concept or business idea.');
+      addMessage('ai', 'Ressources reçues ! Je vais les analyser avec votre idée de produit. Veuillez décrire votre concept de produit ou votre idée d\'entreprise.');
     }
   };
 
+  // Reset conversation context when starting a new conversation
+  const handleNewConversation = () => {
+    setConversationContext({
+      stage: 'initial',
+      messageCount: 0
+    });
+    setMessages([]);
+    setCurrentView('chat');
+  };
+
   const handleSubmitIdea = async (idea: string) => {
+    // If this is the first message and we have existing context, reset it
+    if (conversationContext.messageCount === 0 && messages.length === 0) {
+      setConversationContext({
+        stage: 'initial',
+        messageCount: 0
+      });
+    }
+    
     addMessage('user', idea);
     setIsAnalyzing(true);
     
@@ -174,31 +198,37 @@ function App() {
       addMessage('ai', result.response);
       
       if (result.shouldProceedToAnalysis) {
-        // Generate full market analysis
-        addMessage('ai', 'Perfect! I have enough information. Let me analyze your market and generate validation strategies...');
+        // Reset analysis data before generating new one
+        setIcps([]);
+        setDiscussions([]);
+        setInboundContent([]);
+        setOutreachMessages([]);
+        setCurrentHypothesis('');
+        
+        addMessage('ai', 'Parfait ! J\'ai assez d\'informations. Laissez-moi analyser votre marché et générer des stratégies de validation...');
         setIsGeneratingAnalysis(true);
-        setAnalysisProgress({ step: 'Starting analysis...', progress: 10, completed: [] });
+        setAnalysisProgress({ step: 'Démarrage de l\'analyse...', progress: 10, completed: [] });
         
         setTimeout(async () => {
           try {
             // Step 1: Generate problem variations
-            setAnalysisProgress({ step: 'Generating problem variations...', progress: 20, completed: [] });
+            setAnalysisProgress({ step: 'Génération des variations du problème...', progress: 20, completed: [] });
             await new Promise(resolve => setTimeout(resolve, 800));
             
             // Step 2: Search discussions
-            setAnalysisProgress({ step: 'Searching relevant discussions...', progress: 40, completed: ['Problem variations'] });
+            setAnalysisProgress({ step: 'Recherche de discussions pertinentes...', progress: 40, completed: ['Variations du problème'] });
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Step 3: Analyze insights
-            setAnalysisProgress({ step: 'Analyzing user insights...', progress: 60, completed: ['Problem variations', 'Discussion search'] });
+            setAnalysisProgress({ step: 'Analyse des insights utilisateurs...', progress: 60, completed: ['Variations du problème', 'Recherche de discussions'] });
             await new Promise(resolve => setTimeout(resolve, 800));
             
             // Step 4: Generate content
-            setAnalysisProgress({ step: 'Creating validation content...', progress: 80, completed: ['Problem variations', 'Discussion search', 'User insights'] });
+            setAnalysisProgress({ step: 'Création du contenu de validation...', progress: 80, completed: ['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs'] });
             
             const analysis = await generateMarketAnalysis(result.updatedContext);
             
-            setAnalysisProgress({ step: 'Finalizing analysis...', progress: 100, completed: ['Problem variations', 'Discussion search', 'User insights', 'Validation content'] });
+            setAnalysisProgress({ step: 'Finalisation de l\'analyse...', progress: 100, completed: ['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs', 'Contenu de validation'] });
             
             setIcps(analysis.icps);
             setDiscussions(analysis.discussions);
@@ -210,14 +240,14 @@ function App() {
             setCurrentView('dashboard');
           } catch (error) {
             console.error('Analysis generation failed:', error);
-            addMessage('ai', 'I encountered an issue generating the full analysis. Let me try a different approach.');
+            addMessage('ai', 'J\'ai rencontré un problème lors de la génération de l\'analyse complète. Laissez-moi essayer une approche différente.');
             setIsGeneratingAnalysis(false);
           }
         }, 1000);
       }
     } catch (error) {
       console.error('Error processing idea:', error);
-      addMessage('ai', 'I\'m having trouble processing your request. Could you try rephrasing your idea?');
+      addMessage('ai', 'J\'ai des difficultés à traiter votre demande. Pourriez-vous reformuler votre idée ?');
     } finally {
       setIsAnalyzing(false);
     }
@@ -299,14 +329,14 @@ function App() {
           <div className="border-b border-gray-200 px-6 py-3">
             <div className="max-w-6xl mx-auto flex items-center space-x-6">
               <button
-                onClick={() => setCurrentView('chat')}
+                onClick={handleNewConversation}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   currentView === 'chat'
                     ? 'bg-black text-white'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                Chat
+                Nouveau Chat
               </button>
               <button
                 onClick={() => setCurrentView('dashboard')}
@@ -348,14 +378,14 @@ function App() {
           <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
             <div className="text-center mb-6">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-black mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Market Analysis</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Génération de l'Analyse Marché</h3>
               <p className="text-sm text-gray-600">{analysisProgress.step}</p>
             </div>
             
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex justify-between text-xs text-gray-500 mb-2">
-                <span>Progress</span>
+                <span>Progrès</span>
                 <span>{analysisProgress.progress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -368,7 +398,7 @@ function App() {
             
             {/* Completed Steps */}
             <div className="space-y-2">
-              {['Problem variations', 'Discussion search', 'User insights', 'Validation content'].map((step, index) => (
+              {['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs', 'Contenu de validation'].map((step, index) => (
                 <div key={step} className="flex items-center space-x-3">
                   <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
                     analysisProgress.completed.includes(step) 
