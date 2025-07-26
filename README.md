@@ -20,6 +20,10 @@ A comprehensive tool that helps entrepreneurs validate product ideas using AI-po
 ## 📋 Prerequisites holaaaaaaaa
 
 
+
+
+
+
 - Node.js 18+ 
 - npm or yarn
 - OpenAI API key (optional - uses mock data if not provided)
