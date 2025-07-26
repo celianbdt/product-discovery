@@ -63,7 +63,7 @@ export default function WaitlistModal({ isOpen, onClose, planName }: WaitlistMod
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs"
         onClick={handleClose}
       />
       
@@ -105,7 +105,7 @@ export default function WaitlistModal({ isOpen, onClose, planName }: WaitlistMod
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-center transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-hidden text-center transition-colors"
                     required
                   />
                 </div>

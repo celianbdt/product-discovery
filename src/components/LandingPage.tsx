@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, Check, Code, DollarSign, Zap } from 'lucide-react';
 import { LavaLamp } from './ui/fluid-blob';
 import Header from './Header';
-import { RainbowButton } from './ui/rainbow-button';
+import { RainbowButton } from './magicui/rainbow-button';
 import HolographicCard from './ui/holographic-card';
 import { SplitText } from './ui/split-text';
 import { PricingSection } from './ui/pricing-section';
@@ -137,15 +137,15 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                     >
                       <div className="group relative z-0 flex cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap border-2 border-black px-6 py-4 text-white [background:var(--bg)] [border-radius:var(--radius)] w-full h-full rounded-xl">
                         {/* spark container */}
-                        <div className="-z-30 blur-[2px] absolute inset-0 overflow-visible [container-type:size]">
+                        <div className="-z-30 blur-[2px] absolute inset-0 overflow-visible @container-[size]">
                           {/* spark */}
-                          <div className="absolute inset-0 h-[100cqh] animate-shimmer-slide [aspect-ratio:1] [border-radius:0] [mask:none]">
+                          <div className="absolute inset-0 h-[100cqh] animate-shimmer-slide aspect-[1] rounded-none [mask:none]">
                             {/* spark before */}
                             <div className="animate-spin-around absolute -inset-full w-auto rotate-0 [background:conic-gradient(from_calc(270deg-(var(--spread)*0.5)),transparent_0,var(--shimmer-color)_var(--spread),transparent_var(--spread))] [translate:0_0]" />
                           </div>
                         </div>
                         {/* backdrop */}
-                        <div className="absolute -z-20 [background:var(--bg)] [border-radius:var(--radius)] [inset:var(--cut)]" />
+                        <div className="absolute -z-20 [background:var(--bg)] [border-radius:var(--radius)] inset-(--cut)" />
                       </div>
                     </div>
                     <input
@@ -153,7 +153,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="relative z-10 w-full px-6 py-4 bg-transparent text-black placeholder-gray-500 text-lg focus:outline-none rounded-xl border-2 border-black"
+                      className="relative z-10 w-full px-6 py-4 bg-transparent text-black placeholder-gray-500 text-lg focus:outline-hidden rounded-xl border-2 border-black"
                       required
                     />
                   </div>
@@ -161,7 +161,6 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <RainbowButton
                   type="submit"
                   disabled={isSubmitting}
-                  variant="black"
                   className="px-8 py-4 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 h-auto"
                 >
                   {isSubmitting ? (
@@ -217,7 +216,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <div className="relative bg-white rounded-2xl p-2 shadow-2xl">
               <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden relative group cursor-pointer">
                 {/* Video placeholder - replace with actual video */}
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200">
+                <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-gray-50 to-gray-200">
                   <div className="text-center">
                     <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
                       <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
@@ -409,15 +408,15 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                     >
                       <div className="group relative z-0 flex cursor-pointer items-center justify-center overflow-hidden whitespace-nowrap border-2 border-white px-6 py-4 text-white [background:var(--bg)] [border-radius:var(--radius)] w-full h-full rounded-xl">
                         {/* spark container */}
-                        <div className="-z-30 blur-[2px] absolute inset-0 overflow-visible [container-type:size]">
+                        <div className="-z-30 blur-[2px] absolute inset-0 overflow-visible @container-[size]">
                           {/* spark */}
-                          <div className="absolute inset-0 h-[100cqh] animate-shimmer-slide [aspect-ratio:1] [border-radius:0] [mask:none]">
+                          <div className="absolute inset-0 h-[100cqh] animate-shimmer-slide aspect-[1] rounded-none [mask:none]">
                             {/* spark before */}
                             <div className="animate-spin-around absolute -inset-full w-auto rotate-0 [background:conic-gradient(from_calc(270deg-(var(--spread)*0.5)),transparent_0,var(--shimmer-color)_var(--spread),transparent_var(--spread))] [translate:0_0]" />
                           </div>
                         </div>
                         {/* backdrop */}
-                        <div className="absolute -z-20 [background:var(--bg)] [border-radius:var(--radius)] [inset:var(--cut)]" />
+                        <div className="absolute -z-20 [background:var(--bg)] [border-radius:var(--radius)] inset-(--cut)" />
                       </div>
                     </div>
                     <input
@@ -425,7 +424,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="relative z-10 w-full px-6 py-4 bg-transparent text-white placeholder-gray-400 text-lg focus:outline-none rounded-xl border-2 border-white"
+                      className="relative z-10 w-full px-6 py-4 bg-transparent text-white placeholder-gray-400 text-lg focus:outline-hidden rounded-xl border-2 border-white"
                       required
                     />
                   </div>
@@ -433,6 +432,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <RainbowButton
                   type="submit"
                   disabled={isSubmitting}
+                  variant="outline"
                   className="px-8 py-4 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 h-auto bg-white text-black"
                 >
                   {isSubmitting ? (
@@ -473,7 +473,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs"
             onClick={() => setShowAuthModal(false)}
           />
           <div className="relative bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
