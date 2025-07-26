@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import Chat from './components/Chat';
+import ProductInput from './components/ProductInput';
 import Dashboard from './components/Dashboard';
 import IterateModal from './components/IterateModal';
 import SalesMode from './components/SalesMode';
-
-interface Message {
-  id: string;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
 
 interface ICP {
   title: string;
@@ -31,8 +24,12 @@ interface Discussion {
 interface InboundContent {
   type: string;
   platform: string;
+  title?: string;
   content: string;
   cta: string;
+  targetAudience?: string;
+  painPoint?: string;
+  estimatedEngagement?: string;
 }
 
 interface OutreachMessage {
@@ -43,6 +40,7 @@ interface OutreachMessage {
 }
 
 interface Prospect {
+  id?: string;
   name: string;
   title: string;
   company: string;
@@ -50,6 +48,16 @@ interface Prospect {
   linkedin: string;
   source: string;
   relevanceScore: number;
+  enriched?: {
+    email?: string;
+    phone?: string;
+    company_email?: string;
+    company_phone?: string;
+    company_website?: string;
+    linkedin_url?: string;
+    twitter_url?: string;
+    confidence_score?: number;
+  };
 }
 
 interface SalesContent {
@@ -68,8 +76,7 @@ interface ValidationResponse {
 }
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [currentView, setCurrentView] = useState<'chat' | 'dashboard' | 'sales'>('chat');
+  const [currentView, setCurrentView] = useState<'input' | 'dashboard' | 'sales'>('input');
   const [showIterateModal, setShowIterateModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [validationData, setValidationData] = useState<ValidationResponse | null>(null);
@@ -82,8 +89,9 @@ function App() {
   const [currentHypothesis, setCurrentHypothesis] = useState('');
 
   // Mock data for sales mode (will be enhanced later)
-  const [prospects] = useState<Prospect[]>([
+  const [prospects, setProspects] = useState<Prospect[]>([
     {
+      id: "1",
       name: "Sarah Chen",
       title: "Founder & CEO",
       company: "TechFlow Solutions",
@@ -93,6 +101,7 @@ function App() {
       relevanceScore: 9
     },
     {
+      id: "2",
       name: "Marcus Rodriguez",
       title: "Product Manager",
       company: "StartupCorp",
@@ -102,6 +111,7 @@ function App() {
       relevanceScore: 8
     },
     {
+      id: "3",
       name: "Emma Thompson",
       title: "Solo Entrepreneur",
       company: "Independent",
@@ -144,13 +154,11 @@ function App() {
     }
     
     if (resourceInfo.length > 0) {
-      addMessage('user', `Resources added: ${resourceInfo.join(', ')}`);
-      addMessage('ai', 'Resources received! I\'ll analyze these along with your product idea. Please describe your product concept or business idea.');
+      alert(`Resources added: ${resourceInfo.join(', ')}`);
     }
   };
 
   const handleSubmitIdea = async (idea: string) => {
-    addMessage('user', idea);
     setIsAnalyzing(true);
     
     try {
@@ -187,14 +195,31 @@ function App() {
         setDiscussions(transformedDiscussions);
       }
 
-      // Generate ICPs from insights
+      // Generate ICPs from insights - always generate 3 ICPs
+      let generatedIcps: ICP[] = [];
       if (data.insights) {
-        const generatedIcps: ICP[] = [
+        const basePainPoints = data.insights.commonPainPoints || ["Time constraints", "Lack of systematic approach"];
+        const baseChannels = data.insights.bestChannels || ["LinkedIn", "Reddit", "Twitter"];
+        const marketDemand = data.insights.marketDemand || "Identified target market based on analysis";
+        
+        generatedIcps = [
           {
             title: "Primary Target Market",
-            description: data.insights.marketDemand || "Identified target market based on analysis",
-            painPoints: data.insights.commonPainPoints || ["Time constraints", "Lack of systematic approach"],
-            channels: data.insights.bestChannels || ["LinkedIn", "Reddit", "Twitter"]
+            description: marketDemand,
+            painPoints: basePainPoints,
+            channels: baseChannels
+          },
+          {
+            title: "Secondary Market Segment",
+            description: `Alternative ${marketDemand.toLowerCase()} with different needs`,
+            painPoints: [...basePainPoints, "Budget constraints", "Integration challenges"],
+            channels: [...baseChannels, "Email", "Direct outreach"]
+          },
+          {
+            title: "Emerging Market Opportunity",
+            description: `New ${marketDemand.toLowerCase()} showing early adoption patterns`,
+            painPoints: [...basePainPoints, "Early adopter challenges", "Limited resources"],
+            channels: [...baseChannels, "Product Hunt", "Beta testing communities"]
           }
         ];
         setIcps(generatedIcps);
@@ -208,21 +233,67 @@ function App() {
 
       // Generate inbound content from insights
       if (data.insights) {
-        const generatedInboundContent: InboundContent[] = [
-          {
-            type: "LinkedIn Post",
-            platform: "LinkedIn",
-            content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
-            cta: "Comment your biggest validation challenge"
-          },
-          {
-            type: "X/Twitter Poll",
-            platform: "Twitter",
-            content: `Quick poll for founders 📊\n\nWhat do you wish existed to help validate your product ideas faster?\n\nA) AI-powered market research\nB) Instant customer feedback loops  \nC) Automated competitor analysis\nD) All of the above`,
-            cta: "Vote and RT for reach"
+        try {
+          const inboundResponse = await fetch('http://localhost:3001/api/product_validator/inbound-content', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              productIdea: idea,
+              insightsJSON: JSON.stringify(data.insights),
+              icpsJSON: JSON.stringify(generatedIcps)
+            }),
+          });
+
+          if (inboundResponse.ok) {
+            const inboundData = await inboundResponse.json();
+            if (inboundData.inboundContent) {
+              setInboundContent(inboundData.inboundContent);
+            }
+          } else {
+            // Fallback to basic content if API fails
+            const generatedInboundContent: InboundContent[] = [
+              {
+                type: "LinkedIn Post",
+                platform: "LinkedIn",
+                title: "The #1 mistake founders make when validating ideas",
+                content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
+                cta: "Comment your biggest validation challenge",
+                targetAudience: "Founders and entrepreneurs",
+                painPoint: "Product validation challenges",
+                estimatedEngagement: "High"
+              },
+              {
+                type: "X/Twitter Poll",
+                platform: "Twitter",
+                title: "Quick poll for founders",
+                content: `Quick poll for founders 📊\n\nWhat do you wish existed to help validate your product ideas faster?\n\nA) AI-powered market research\nB) Instant customer feedback loops  \nC) Automated competitor analysis\nD) All of the above`,
+                cta: "Vote and RT for reach",
+                targetAudience: "Product managers and founders",
+                painPoint: "Need for faster validation tools",
+                estimatedEngagement: "Medium"
+              }
+            ];
+            setInboundContent(generatedInboundContent);
           }
-        ];
-        setInboundContent(generatedInboundContent);
+        } catch (error) {
+          console.error('Error generating inbound content:', error);
+          // Fallback content
+          const generatedInboundContent: InboundContent[] = [
+            {
+              type: "LinkedIn Post",
+              platform: "LinkedIn",
+              title: "The #1 mistake founders make when validating ideas",
+              content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
+              cta: "Comment your biggest validation challenge",
+              targetAudience: "Founders and entrepreneurs",
+              painPoint: "Product validation challenges",
+              estimatedEngagement: "High"
+            }
+          ];
+          setInboundContent(generatedInboundContent);
+        }
       }
 
       // Generate outreach messages
@@ -236,27 +307,13 @@ function App() {
         setOutreachMessages(generatedOutreachMessages);
       }
       
-      addMessage('ai', 
-        'Excellent! I\'ve analyzed your product idea and resources. Based on my analysis, I\'ve identified potential ICPs, found relevant market discussions, and generated validation content.\n\nI recommend starting with the primary target market - they show the highest engagement and clearest pain points around product validation.\n\nCheck out the dashboard to see detailed insights and start your validation journey!'
-      );
-      
       setCurrentView('dashboard');
     } catch (error) {
       console.error('Error calling validation API:', error);
-      addMessage('ai', 'Sorry, there was an error analyzing your idea. Please try again or check if the server is running.');
+      alert('Sorry, there was an error analyzing your idea. Please try again or check if the server is running.');
     } finally {
       setIsAnalyzing(false);
     }
-  };
-
-  const addMessage = (type: 'user' | 'ai', content: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      type,
-      content,
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, newMessage]);
   };
 
   const handleIterate = () => {
@@ -264,13 +321,10 @@ function App() {
   };
 
   const handleIterateSubmit = (learnings: string) => {
-    addMessage('user', `Iteration learnings: ${learnings}`);
     setIsAnalyzing(true);
     
     setTimeout(() => {
-      addMessage('ai', 
-        'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
-      );
+      alert('Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!');
       setIsAnalyzing(false);
     }, 2000);
   };
@@ -301,64 +355,99 @@ function App() {
     setCurrentView('dashboard');
   };
 
+  const handleEnrichProspects = async (selectedProspects: Prospect[]) => {
+    if (selectedProspects.length === 0) {
+      alert('Please select at least one prospect to enrich');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/product_validator/enrich-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prospects: selectedProspects,
+          webhookUrl: undefined // Optional: could be set up for production
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.prospects) {
+        // Update prospects with enriched data
+        setProspects(prevProspects => 
+          prevProspects.map(prospect => {
+            const enrichedProspect = data.prospects.find((p: any) => p.id === prospect.id);
+            return enrichedProspect ? { ...prospect, enriched: enrichedProspect.enriched } : prospect;
+          })
+        );
+        alert(`Successfully enriched ${data.prospects.length} prospects!`);
+      } else {
+        alert(`Enrichment request submitted! ID: ${data.enrichment_id}`);
+      }
+    } catch (error) {
+      console.error('Error enriching prospects:', error);
+      alert('Error enriching prospects. Please try again.');
+    }
+  };
+
   if (currentView === 'sales') {
     return (
       <SalesMode
         onBack={handleBackToAnalysis}
         prospects={prospects}
         salesContent={salesContent}
+        onEnrichProspects={handleEnrichProspects}
+      />
+    );
+  }
+
+  if (currentView === 'input') {
+    return (
+      <ProductInput
+        onResourceUpload={handleResourceUpload}
+        onSubmitIdea={handleSubmitIdea}
+        isAnalyzing={isAnalyzing}
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {currentView === 'chat' ? (
-        <Chat
-          onResourceUpload={handleResourceUpload}
-          onSubmitIdea={handleSubmitIdea}
-          messages={messages}
-        />
-      ) : (
-        <>
-          {/* Navigation */}
-          <div className="border-b border-gray-200 px-6 py-3">
-            <div className="max-w-6xl mx-auto flex items-center space-x-6">
-              <button
-                onClick={() => setCurrentView('chat')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  currentView === 'chat'
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  currentView === 'dashboard'
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                Analysis
-              </button>
-            </div>
-          </div>
+      {/* Navigation */}
+      <div className="border-b border-gray-200 px-6 py-3">
+        <div className="max-w-6xl mx-auto flex items-center space-x-6">
+          <button
+            onClick={() => setCurrentView('input')}
+            className="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            New Analysis
+          </button>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-black text-white"
+          >
+            Analysis
+          </button>
+        </div>
+      </div>
 
-          <Dashboard
-            icps={icps}
-            discussions={discussions}
-            inboundContent={inboundContent}
-            outreachMessages={outreachMessages}
-            currentHypothesis={currentHypothesis}
-            onIterate={handleIterate}
-            onGoToSales={handleGoToSales}
-            onExport={handleExport}
-          />
-        </>
-      )}
+      <Dashboard
+        icps={icps}
+        discussions={discussions}
+        inboundContent={inboundContent}
+        outreachMessages={outreachMessages}
+        currentHypothesis={currentHypothesis}
+        onIterate={handleIterate}
+        onGoToSales={handleGoToSales}
+        onExport={handleExport}
+      />
 
       {isAnalyzing && (
         <div className="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg p-4 shadow-lg">
