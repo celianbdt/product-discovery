@@ -85,6 +85,15 @@ function App() {
     showResults: false
   });
 
+  // Debug logging
+  console.log('App render:', { 
+    currentView, 
+    messagesCount: messages.length,
+    icpsCount: icps.length,
+    isGeneratingAnalysis,
+    analysisProgress
+  });
+
 
   const [prospects] = useState<Prospect[]>([
     {

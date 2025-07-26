@@ -62,6 +62,17 @@ export default function Dashboard({
   onGoToSales,
   onExport 
 }: DashboardProps) {
+  // Debug logging
+  console.log('Dashboard render:', { 
+    icpsCount: icps.length, 
+    discussionsCount: discussions.length, 
+    inboundCount: inboundContent.length,
+    outreachCount: outreachMessages.length,
+    hypothesis: currentHypothesis,
+    isGenerating,
+    analysisProgress 
+  });
+
   return (
     <div className="p-6 bg-white">
       <div className="max-w-6xl mx-auto">
