@@ -166,7 +166,6 @@ function App() {
   ]);
 
   const handleResourceUpload = (files: FileList | null, urls: string[]) => {
-    // Reset conversation context when new resources are uploaded
     setConversationContext({
       stage: 'initial',
       messageCount: 0
