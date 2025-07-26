@@ -89,7 +89,18 @@ function App() {
   const [currentView, setCurrentView] = useState<'input' | 'dashboard' | 'sales'>('input');
   const [showIterateModal, setShowIterateModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [validationData, setValidationData] = useState<ValidationResponse | null>(null);
+  const [conversationContext, setConversationContext] = useState({
+    stage: 'initial',
+    messageCount: 0
+  });
+  const [analysisProgress, setAnalysisProgress] = useState({
+    step: 'Initializing...',
+    progress: 0,
+    completed: [] as string[],
+    showResults: false
+  });
 
   // State for API data
   const [icps, setIcps] = useState<ICP[]>([]);
@@ -492,6 +503,8 @@ function App() {
         inboundContent={inboundContent}
         outreachMessages={outreachMessages}
         currentHypothesis={currentHypothesis}
+        isGenerating={isGeneratingAnalysis}
+        analysisProgress={analysisProgress}
         onIterate={handleIterate}
         onGoToSales={handleGoToSales}
         onExport={handleExport}
