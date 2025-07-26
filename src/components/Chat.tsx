@@ -49,7 +49,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 ? (
@@ -139,7 +139,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
       <div className="border-t border-gray-200 p-6">
         <div className="max-w-4xl mx-auto">
           {messages.length > 0 ? (
-            <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+            <form onSubmit={handleSubmit} className="flex items-center space-x-3">
               <button
                 type="button"
                 onClick={() => setShowResourcePanel(!showResourcePanel)}
