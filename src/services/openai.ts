@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { runCompleteResearchPipeline } from './researchPipeline';
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -107,12 +108,46 @@ export async function generateMarketAnalysis(context: ConversationContext): Prom
   outreachMessages: any[];
   hypothesis: string;
 }> {
+  try {
+    // Détermine si c'est B2B ou B2C basé sur le contexte
+    const isB2B = context.targetAudience?.toLowerCase().includes('business') || 
+                  context.targetAudience?.toLowerCase().includes('professional') ||
+                  context.targetAudience?.toLowerCase().includes('company') ||
+                  context.productIdea?.toLowerCase().includes('saas') ||
+                  context.productIdea?.toLowerCase().includes('enterprise');
+
+    // Lance le pipeline de recherche complet
+    const researchResults = await runCompleteResearchPipeline(
+      context.problemDescription || context.productIdea || 'Product validation challenge',
+      context.targetAudience || 'General users',
+      isB2B
+    );
+
+    // Utilise les vraies discussions trouvées
+    const realDiscussions = researchResults.discussions.map(d => ({
+      platform: d.platform,
+      title: d.title,
+      url: d.url,
+      engagement: d.engagement,
+      relevance: Math.round(d.relevanceScore / 10),
+      profileUrl: d.profileUrl,
+      profileName: d.profileName
+    }));
+
+    // Génère les ICPs basés sur les insights réels
+    const icpsFromInsights = researchResults.insights.segments.map((segment, index) => ({
+      title: segment,
+      description: `${segment} experiencing ${researchResults.insights.painPoints[index] || 'the core problem'}`,
+      painPoints: researchResults.insights.painPoints.slice(index, index + 3),
+      channels: isB2B ? ["LinkedIn", "Reddit", "Industry Forums"] : ["Reddit", "Facebook", "Twitter"]
+    }));
   const analysisPrompt = `Based on the following product information, generate a comprehensive market analysis for user research and validation:
 
 Product Idea: ${context.productIdea}
 Target Audience: ${context.targetAudience}
 Problem Description: ${context.problemDescription}
 Resources: ${context.resources?.join(', ') || 'None provided'}
+Research Insights: ${JSON.stringify(researchResults.insights)}
 
 Generate a JSON response with:
 1. "icps": Array of 2-3 detailed ICPs with title, description, painPoints array, and channels array
@@ -122,10 +157,10 @@ Generate a JSON response with:
 5. "hypothesis": Clear hypothesis statement for validation
 
 Focus on USER RESEARCH and VALIDATION content, not sales. The goal is to validate the problem and solution fit.
+Use the research insights to make the content more targeted and relevant.
 
 Return ONLY valid JSON, no additional text.`;
 
-  try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -141,15 +176,30 @@ Return ONLY valid JSON, no additional text.`;
     // Parse the JSON response or return mock data if parsing fails
     try {
       const cleanedResponse = response.replace(/```json\n?|\n?```/g, '').trim();
-      return JSON.parse(cleanedResponse);
+      const aiGenerated = JSON.parse(cleanedResponse);
+      
+      // Combine AI-generated content with real research data
+      return {
+        icps: icpsFromInsights.length > 0 ? icpsFromInsights : aiGenerated.icps,
+        discussions: realDiscussions.length > 0 ? realDiscussions : aiGenerated.discussions,
+        inboundContent: aiGenerated.inboundContent,
+        outreachMessages: aiGenerated.outreachMessages,
+        hypothesis: aiGenerated.hypothesis || `${context.targetAudience || 'Target users'} experience significant pain with ${context.problemDescription || 'the current problem'} and would be willing to try ${context.productIdea || 'a new solution'} if it addresses their core needs effectively.`
+      };
     } catch {
       // Return structured mock data if JSON parsing fails
-      return generateMockAnalysis(context);
+      const mockData = generateMockAnalysis(context);
+      return {
+        ...mockData,
+        icps: icpsFromInsights.length > 0 ? icpsFromInsights : mockData.icps,
+        discussions: realDiscussions.length > 0 ? realDiscussions : mockData.discussions
+      };
     }
 
   } catch (error) {
     console.error('Analysis generation error:', error);
-    return generateMockAnalysis(context);
+    const mockData = generateMockAnalysis(context);
+    return mockData;
   }
 }
 
