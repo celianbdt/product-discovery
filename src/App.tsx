@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { analyzeUserInput, generateMarketAnalysis, ConversationContext } from './services/anthropic';
-import Chat from './components/Chat';
+import ProductInput from './components/ProductInput';
 import Dashboard from './components/Dashboard';
 import IterateModal from './components/IterateModal';
 import SalesMode from './components/SalesMode';
+import LandingPage from './components/LandingPage';
 
 interface Message {
   id: string;
@@ -32,8 +32,12 @@ interface Discussion {
 interface InboundContent {
   type: string;
   platform: string;
+  title?: string;
   content: string;
   cta: string;
+  targetAudience?: string;
+  painPoint?: string;
+  estimatedEngagement?: string;
 }
 
 interface OutreachMessage {
@@ -44,6 +48,7 @@ interface OutreachMessage {
 }
 
 interface Prospect {
+  id?: string;
   name: string;
   title: string;
   company: string;
@@ -51,6 +56,16 @@ interface Prospect {
   linkedin: string;
   source: string;
   relevanceScore: number;
+  enriched?: {
+    email?: string;
+    phone?: string;
+    company_email?: string;
+    company_phone?: string;
+    company_website?: string;
+    linkedin_url?: string;
+    twitter_url?: string;
+    confidence_score?: number;
+  };
 }
 
 interface SalesContent {
@@ -61,42 +76,32 @@ interface SalesContent {
   personalization: string[];
 }
 
+interface ValidationResponse {
+  discussions?: any[];
+  people?: any[];
+  insights?: any;
+  raw?: string;
+}
+
 function App() {
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentView, setCurrentView] = useState<'chat' | 'dashboard' | 'sales'>('chat');
+  const [currentView, setCurrentView] = useState<'input' | 'dashboard' | 'sales'>('input');
   const [showIterateModal, setShowIterateModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [conversationContext, setConversationContext] = useState<ConversationContext>({
-    stage: 'initial',
-    messageCount: 0
-  });
+  const [validationData, setValidationData] = useState<ValidationResponse | null>(null);
 
-  // Mock data for demonstration
+  // State for API data
   const [icps, setIcps] = useState<ICP[]>([]);
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [inboundContent, setInboundContent] = useState<InboundContent[]>([]);
   const [outreachMessages, setOutreachMessages] = useState<OutreachMessage[]>([]);
   const [currentHypothesis, setCurrentHypothesis] = useState('');
-  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState({
-    step: '',
-    progress: 0,
-    completed: [] as string[],
-    showResults: false
-  });
 
-  // Debug logging
-  console.log('App render:', { 
-    currentView, 
-    messagesCount: messages.length,
-    icpsCount: icps.length,
-    isGeneratingAnalysis,
-    analysisProgress
-  });
-
-
-  const [prospects] = useState<Prospect[]>([
+  // Mock data for sales mode (will be enhanced later)
+  const [prospects, setProspects] = useState<Prospect[]>([
     {
+      id: "1",
       name: "Sarah Chen",
       title: "Founder & CEO",
       company: "TechFlow Solutions",
@@ -106,6 +111,7 @@ function App() {
       relevanceScore: 9
     },
     {
+      id: "2",
       name: "Marcus Rodriguez",
       title: "Product Manager",
       company: "StartupCorp",
@@ -115,6 +121,7 @@ function App() {
       relevanceScore: 8
     },
     {
+      id: "3",
       name: "Emma Thompson",
       title: "Solo Entrepreneur",
       company: "Independent",
@@ -153,10 +160,10 @@ function App() {
       stage: 'initial',
       messageCount: 0
     });
-    
+
     const resourceInfo = [];
     const resources = [];
-    
+
     if (files && files.length > 0) {
       resourceInfo.push(`${files.length} file(s) uploaded`);
       for (let i = 0; i < files.length; i++) {
@@ -167,139 +174,170 @@ function App() {
       resourceInfo.push(`${urls.length} URL(s) added`);
       resources.push(...urls);
     }
-    
-    if (resourceInfo.length > 0) {
-      setConversationContext(prev => ({
-        ...prev,
-        resources: [...(prev.resources || []), ...resources]
-      }));
-      addMessage('user', `Resources added: ${resourceInfo.join(', ')}`);
-      addMessage('ai', 'Ressources reçues ! Je vais les analyser avec votre idée de produit. Veuillez décrire votre concept de produit ou votre idée d\'entreprise.');
-    }
-  };
 
-  // Reset conversation context when starting a new conversation
-  const handleNewConversation = () => {
-    setConversationContext({
-      stage: 'initial',
-      messageCount: 0
-    });
-    setMessages([]);
-    setCurrentView('chat');
+    if (resourceInfo.length > 0) {
+      alert(`Resources added: ${resourceInfo.join(', ')}`);
+    }
   };
 
   const handleSubmitIdea = async (idea: string) => {
-    // If this is the first message and we have existing context, reset it
-    if (conversationContext.messageCount === 0 && messages.length === 0) {
-      setConversationContext({
-        stage: 'initial',
-        messageCount: 0
-      });
-    }
-    
-    addMessage('user', idea);
     setIsAnalyzing(true);
-    
+
     try {
-      const hasResources = !!(conversationContext.resources && conversationContext.resources.length > 0);
-      const result = await analyzeUserInput(idea, conversationContext, hasResources);
-      
-      setConversationContext(result.updatedContext);
-      addMessage('ai', result.response);
-      
-      if (result.shouldProceedToAnalysis) {
-        // Reset analysis data before generating new one
-        setIcps([]);
-        setDiscussions([]);
-        setInboundContent([]);
-        setOutreachMessages([]);
-        setCurrentHypothesis('');
-        
-        addMessage('ai', 'Parfait ! J\'ai assez d\'informations. Laissez-moi analyser votre marché et générer des stratégies de validation...');
-        setIsGeneratingAnalysis(true);
-        setAnalysisProgress({ step: 'Démarrage de l\'analyse...', progress: 10, completed: [] });
-        
-        setTimeout(async () => {
-          try {
-            // Show the dashboard immediately with initial hypothesis
-            setCurrentView('dashboard');
-            setAnalysisProgress(prev => ({ ...prev, showResults: true }));
-            
-            const actualProblem = result.updatedContext.problemDescription || result.updatedContext.productIdea || 'Product validation challenge';
-            const actualTarget = result.updatedContext.targetAudience || 'General users';
-            
-            // Step 0: Initial hypothesis
-            const initialHypothesis = `${actualTarget || 'Les utilisateurs cibles'} rencontrent des difficultés significatives avec ${actualProblem || 'le problème identifié'} et seraient prêts à essayer une nouvelle solution si elle répond efficacement à leurs besoins principaux.`;
-            setCurrentHypothesis(initialHypothesis);
-            
-            // Step 1: Generate quick analysis (ICPs, content, messages)
-            setAnalysisProgress({ step: 'Génération de l\'analyse initiale...', progress: 20, completed: [], showResults: true });
-            
-            const analysis = await generateMarketAnalysis(result.updatedContext);
-            
-            // Show ICPs immediately
-            setIcps(analysis.icps);
-            setAnalysisProgress({ step: 'ICPs générés, recherche de discussions...', progress: 40, completed: ['Analyse initiale'], showResults: true });
-            
-            // Show inbound content
-            await new Promise(resolve => setTimeout(resolve, 300));
-            setInboundContent(analysis.inboundContent);
-            
-            // Show outreach messages
-            await new Promise(resolve => setTimeout(resolve, 300));
-            setOutreachMessages(analysis.outreachMessages);
-            
-            setAnalysisProgress({ step: 'Contenu généré, recherche de discussions...', progress: 60, completed: ['Analyse initiale', 'Contenu de validation'], showResults: true });
-            
-            // Step 2: Search discussions with Google Dorks (in parallel)
-            const isB2B = actualTarget.toLowerCase().includes('business') || 
-                          actualTarget.toLowerCase().includes('professional') ||
-                          actualTarget.toLowerCase().includes('company') ||
-                          actualProblem.toLowerCase().includes('saas') ||
-                          actualProblem.toLowerCase().includes('enterprise') ||
-                          actualProblem.toLowerCase().includes('b2b');
-            
-            // Import and run research pipeline for discussions
-            const { runCompleteResearchPipeline } = await import('./services/researchPipeline');
-            
-            // Run research in background and update discussions as they come
-            runCompleteResearchPipeline(actualProblem, actualTarget, isB2B)
-              .then(researchResults => {
-                const realDiscussions = researchResults.discussions.map(d => ({
-                  platform: d.platform,
-                  title: d.title,
-                  url: d.url,
-                  engagement: d.engagement,
-                  relevance: Math.round(d.relevanceScore / 10),
-                  profileUrl: d.profileUrl,
-                  profileName: d.profileName
-                }));
-                
-                setDiscussions(realDiscussions);
-                
-                // Update hypothesis based on research findings
-                const evolvedHypothesis = `Basé sur la recherche: ${actualTarget} montrent un intérêt significatif pour résoudre ${actualProblem}. Les discussions analysées révèlent une demande claire pour une solution qui adresse leurs points de douleur principaux.`;
-                setCurrentHypothesis(evolvedHypothesis);
-                
-                setAnalysisProgress({ step: 'Analyse complète terminée!', progress: 100, completed: ['Analyse initiale', 'Contenu de validation', 'Discussions trouvées', 'Insights générés'], showResults: true });
-                setIsGeneratingAnalysis(false);
-              })
-              .catch(error => {
-                console.error('Research pipeline failed:', error);
-                setAnalysisProgress({ step: 'Analyse terminée (discussions limitées)', progress: 100, completed: ['Analyse initiale', 'Contenu de validation'], showResults: true });
-                setIsGeneratingAnalysis(false);
-              });
-            
-          } catch (error) {
-            console.error('Analysis generation failed:', error);
-            addMessage('ai', 'J\'ai rencontré un problème lors de la génération de l\'analyse complète. Laissez-moi essayer une approche différente.');
-            setIsGeneratingAnalysis(false);
-          }
-        }, 500); // Reduced delay
+      const response = await fetch('http://localhost:3001/api/product_validator/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productIdea: idea,
+          context: undefined,
+          resourcesJSON: undefined
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      setValidationData(data);
+
+      // Transform API data to match our interfaces
+      if (data.discussions) {
+        const transformedDiscussions: Discussion[] = data.discussions.map((discussion: any) => ({
+          platform: discussion.platform,
+          title: discussion.title,
+          url: discussion.url,
+          engagement: `${discussion.relevance}% relevance`,
+          relevance: discussion.relevance,
+          profileUrl: discussion.url,
+          profileName: discussion.author
+        }));
+        setDiscussions(transformedDiscussions);
+      }
+
+      // Generate ICPs from insights - always generate 3 ICPs
+      let generatedIcps: ICP[] = [];
+      if (data.insights) {
+        const basePainPoints = data.insights.commonPainPoints || ["Time constraints", "Lack of systematic approach"];
+        const baseChannels = data.insights.bestChannels || ["LinkedIn", "Reddit", "Twitter"];
+        const marketDemand = data.insights.marketDemand || "Identified target market based on analysis";
+
+        generatedIcps = [
+          {
+            title: "Primary Target Market",
+            description: marketDemand,
+            painPoints: basePainPoints,
+            channels: baseChannels
+          },
+          {
+            title: "Secondary Market Segment",
+            description: `Alternative ${marketDemand.toLowerCase()} with different needs`,
+            painPoints: [...basePainPoints, "Budget constraints", "Integration challenges"],
+            channels: [...baseChannels, "Email", "Direct outreach"]
+          },
+          {
+            title: "Emerging Market Opportunity",
+            description: `New ${marketDemand.toLowerCase()} showing early adoption patterns`,
+            painPoints: [...basePainPoints, "Early adopter challenges", "Limited resources"],
+            channels: [...baseChannels, "Product Hunt", "Beta testing communities"]
+          }
+        ];
+        setIcps(generatedIcps);
+      }
+
+      // Generate hypothesis from insights
+      if (data.insights) {
+        const hypothesis = `${data.insights.marketDemand || 'Target market'} struggles with ${data.insights.commonPainPoints?.join(', ') || 'validation challenges'}. They need an AI-powered tool that can quickly analyze ideas, identify target markets, and generate validation content.`;
+        setCurrentHypothesis(hypothesis);
+      }
+
+      // Generate inbound content from insights
+      if (data.insights) {
+        try {
+          const inboundResponse = await fetch('http://localhost:3001/api/product_validator/inbound-content', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              productIdea: idea,
+              insightsJSON: JSON.stringify(data.insights),
+              icpsJSON: JSON.stringify(generatedIcps)
+            }),
+          });
+
+          if (inboundResponse.ok) {
+            const inboundData = await inboundResponse.json();
+            if (inboundData.inboundContent) {
+              setInboundContent(inboundData.inboundContent);
+            }
+          } else {
+            // Fallback to basic content if API fails
+            const generatedInboundContent: InboundContent[] = [
+              {
+                type: "LinkedIn Post",
+                platform: "LinkedIn",
+                title: "The #1 mistake founders make when validating ideas",
+                content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
+                cta: "Comment your biggest validation challenge",
+                targetAudience: "Founders and entrepreneurs",
+                painPoint: "Product validation challenges",
+                estimatedEngagement: "High"
+              },
+              {
+                type: "X/Twitter Poll",
+                platform: "Twitter",
+                title: "Quick poll for founders",
+                content: `Quick poll for founders 📊\n\nWhat do you wish existed to help validate your product ideas faster?\n\nA) AI-powered market research\nB) Instant customer feedback loops  \nC) Automated competitor analysis\nD) All of the above`,
+                cta: "Vote and RT for reach",
+                targetAudience: "Product managers and founders",
+                painPoint: "Need for faster validation tools",
+                estimatedEngagement: "Medium"
+              }
+            ];
+            setInboundContent(generatedInboundContent);
+          }
+        } catch (error) {
+          console.error('Error generating inbound content:', error);
+          // Fallback content
+          const generatedInboundContent: InboundContent[] = [
+            {
+              type: "LinkedIn Post",
+              platform: "LinkedIn",
+              title: "The #1 mistake founders make when validating ideas",
+              content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
+              cta: "Comment your biggest validation challenge",
+              targetAudience: "Founders and entrepreneurs",
+              painPoint: "Product validation challenges",
+              estimatedEngagement: "High"
+            }
+          ];
+          setInboundContent(generatedInboundContent);
+        }
+      }
+
+      // Generate outreach messages
+      if (data.people && data.people.length > 0) {
+        const generatedOutreachMessages: OutreachMessage[] = data.people.map((person: any) => ({
+          type: "Personalized DM",
+          platform: person.platform,
+          message: `Hi there! I noticed your post about ${person.problem} and thought our AI-powered validation tool might be exactly what you're looking for. Would love to show you a quick demo if you're interested!`,
+          personalization: ["{firstName}", "{specificProblem}", "{platform}"]
+        }));
+        setOutreachMessages(generatedOutreachMessages);
+      }
+
+      addMessage('ai',
+        'Excellent! I\'ve analyzed your product idea and resources. Based on my analysis, I\'ve identified potential ICPs, found relevant market discussions, and generated validation content.\n\nI recommend starting with the primary target market - they show the highest engagement and clearest pain points around product validation.\n\nCheck out the dashboard to see detailed insights and start your validation journey!'
+      );
+
+
+      setCurrentView('dashboard');
     } catch (error) {
-      console.error('Error processing idea:', error);
-      addMessage('ai', 'J\'ai des difficultés à traiter votre demande. Pourriez-vous reformuler votre idée ?');
+      console.error('Error calling validation API:', error);
+      alert('Sorry, there was an error analyzing your idea. Please try again or check if the server is running.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -320,13 +358,13 @@ function App() {
   };
 
   const handleIterateSubmit = (learnings: string) => {
-    addMessage('user', `Iteration learnings: ${learnings}`);
     setIsAnalyzing(true);
-    
+
     setTimeout(() => {
-      addMessage('ai', 
-        'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The fintech angle seems promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
+      addMessage('ai',
+        'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
       );
+      alert('Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!');
       setIsAnalyzing(false);
     }, 2000);
   };
@@ -340,10 +378,10 @@ function App() {
       hypothesis: currentHypothesis,
       icps,
       discussions,
-      validationContent,
+      validationContent: inboundContent,
       timestamp: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -357,66 +395,107 @@ function App() {
     setCurrentView('dashboard');
   };
 
+  const handleGetStarted = () => {
+    setShowLandingPage(false);
+  };
+
+  if (showLandingPage) {
+    return <LandingPage onGetStarted={handleGetStarted} />;
+  }
+
+  const handleEnrichProspects = async (selectedProspects: Prospect[]) => {
+    if (selectedProspects.length === 0) {
+      alert('Please select at least one prospect to enrich');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/product_validator/enrich-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prospects: selectedProspects,
+          webhookUrl: undefined // Optional: could be set up for production
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.prospects) {
+        // Update prospects with enriched data
+        setProspects(prevProspects =>
+          prevProspects.map(prospect => {
+            const enrichedProspect = data.prospects.find((p: any) => p.id === prospect.id);
+            return enrichedProspect ? { ...prospect, enriched: enrichedProspect.enriched } : prospect;
+          })
+        );
+        alert(`Successfully enriched ${data.prospects.length} prospects!`);
+      } else {
+        alert(`Enrichment request submitted! ID: ${data.enrichment_id}`);
+      }
+    } catch (error) {
+      console.error('Error enriching prospects:', error);
+      alert('Error enriching prospects. Please try again.');
+    }
+  };
+
   if (currentView === 'sales') {
     return (
       <SalesMode
         onBack={handleBackToAnalysis}
         prospects={prospects}
         salesContent={salesContent}
+        onEnrichProspects={handleEnrichProspects}
+      />
+    );
+  }
+
+  if (currentView === 'input') {
+    return (
+      <ProductInput
+        onResourceUpload={handleResourceUpload}
+        onSubmitIdea={handleSubmitIdea}
+        isAnalyzing={isAnalyzing}
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {currentView === 'chat' ? (
-        <Chat
-          onResourceUpload={handleResourceUpload}
-          onSubmitIdea={handleSubmitIdea}
-          messages={messages}
-        />
-      ) : (
-        <>
-          {/* Navigation */}
-          <div className="border-b border-gray-200 px-6 py-3">
-            <div className="max-w-6xl mx-auto flex items-center space-x-6">
-              <button
-                onClick={handleNewConversation}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  currentView === 'chat'
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                Nouveau Chat
-              </button>
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  currentView === 'dashboard'
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                Analysis
-              </button>
-            </div>
-          </div>
+      {/* Navigation */}
+      <div className="border-b border-gray-200 px-6 py-3">
+        <div className="max-w-6xl mx-auto flex items-center space-x-6">
+          <button
+            onClick={() => setCurrentView('input')}
+            className="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            New Analysis
+          </button>
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-black text-white"
+          >
+            Analysis
+          </button>
+        </div>
+      </div>
 
-          <Dashboard
-            icps={icps}
-            discussions={discussions}
-            inboundContent={inboundContent}
-            outreachMessages={outreachMessages}
-            currentHypothesis={currentHypothesis}
-            isGenerating={isGeneratingAnalysis}
-            analysisProgress={analysisProgress}
-            onIterate={handleIterate}
-            onGoToSales={handleGoToSales}
-            onExport={handleExport}
-          />
-        </>
-      )}
+      <Dashboard
+        icps={icps}
+        discussions={discussions}
+        inboundContent={inboundContent}
+        outreachMessages={outreachMessages}
+        currentHypothesis={currentHypothesis}
+        onIterate={handleIterate}
+        onGoToSales={handleGoToSales}
+        onExport={handleExport}
+      />
 
       {isAnalyzing && (
         <div className="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg p-4 shadow-lg">
@@ -435,7 +514,7 @@ function App() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Génération de l'Analyse Marché</h3>
               <p className="text-sm text-gray-600">{analysisProgress.step}</p>
             </div>
-            
+
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex justify-between text-xs text-gray-500 mb-2">
@@ -443,20 +522,20 @@ function App() {
                 <span>{analysisProgress.progress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-black h-2 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${analysisProgress.progress}%` }}
                 ></div>
               </div>
             </div>
-            
+
             {/* Completed Steps */}
             <div className="space-y-2">
               {['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs', 'Contenu de validation'].map((step, index) => (
                 <div key={step} className="flex items-center space-x-3">
                   <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                    analysisProgress.completed.includes(step) 
-                      ? 'bg-green-500 text-white' 
+                    analysisProgress.completed.includes(step)
+                      ? 'bg-green-500 text-white'
                       : analysisProgress.step.toLowerCase().includes(step.toLowerCase())
                         ? 'bg-black text-white animate-pulse'
                         : 'bg-gray-200'
@@ -468,8 +547,8 @@ function App() {
                     )}
                   </div>
                   <span className={`text-sm ${
-                    analysisProgress.completed.includes(step) 
-                      ? 'text-green-600 font-medium' 
+                    analysisProgress.completed.includes(step)
+                      ? 'text-green-600 font-medium'
                       : 'text-gray-600'
                   }`}>
                     {step}

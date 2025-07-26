@@ -143,7 +143,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
               <button
                 type="button"
                 onClick={() => setShowResourcePanel(!showResourcePanel)}
-                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors shrink-0"
               >
                 <Paperclip size={20} />
               </button>
@@ -165,7 +165,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
               <button
                 type="submit"
                 disabled={!message.trim()}
-                className="p-3 bg-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                className="p-3 bg-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Send size={20} />
               </button>
