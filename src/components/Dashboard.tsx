@@ -50,9 +50,9 @@ interface DashboardProps {
   onExport: () => void;
 }
 
-export default function Dashboard({ 
-  icps, 
-  discussions, 
+export default function Dashboard({
+  icps,
+  discussions,
   inboundContent,
   outreachMessages,
   currentHypothesis,
@@ -60,17 +60,17 @@ export default function Dashboard({
   analysisProgress,
   onIterate,
   onGoToSales,
-  onExport 
+  onExport
 }: DashboardProps) {
   // Debug logging
-  console.log('Dashboard render:', { 
-    icpsCount: icps.length, 
-    discussionsCount: discussions.length, 
+  console.log('Dashboard render:', {
+    icpsCount: icps.length,
+    discussionsCount: discussions.length,
     inboundCount: inboundContent.length,
     outreachCount: outreachMessages.length,
     hypothesis: currentHypothesis,
     isGenerating,
-    analysisProgress 
+    analysisProgress
   });
 
   return (
@@ -128,7 +128,7 @@ export default function Dashboard({
                 <span>{analysisProgress.progress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-black h-2 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${analysisProgress.progress}%` }}
                 ></div>
@@ -159,14 +159,14 @@ export default function Dashboard({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[200px]">
             {icps.map((icp, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="border border-gray-200 rounded-xl p-4 animate-fadeIn"
                 style={{ animationDelay: `${index * 200}ms` }}
               >
                 <h4 className="font-semibold text-gray-900 mb-2">{icp.title}</h4>
                 <p className="text-sm text-gray-600 mb-3">{icp.description}</p>
-                
+
                 <div className="mb-3">
                   <p className="text-xs font-medium text-gray-700 mb-1">Pain Points:</p>
                   <ul className="text-xs text-gray-600 space-y-1">
@@ -175,7 +175,7 @@ export default function Dashboard({
                     ))}
                   </ul>
                 </div>
-                
+
                 <div>
                   <p className="text-xs font-medium text-gray-700 mb-1">Channels:</p>
                   <div className="flex flex-wrap gap-1">
@@ -218,13 +218,13 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-            
+
             {/* Relevant Discussions */}
             <div className="space-y-4">
               <h4 className="font-medium text-gray-900">Relevant Discussions & Profiles</h4>
               {discussions.map((discussion, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="border border-gray-200 rounded-xl p-4 animate-slideInLeft"
                   style={{ animationDelay: `${index * 300}ms` }}
                 >
@@ -242,7 +242,7 @@ export default function Dashboard({
                   </div>
                   <h5 className="font-medium text-gray-900 mb-2 text-sm">{discussion.title}</h5>
                   <p className="text-xs text-gray-600 mb-3">{discussion.engagement}</p>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-gray-500">Profile:</span>
@@ -277,8 +277,8 @@ export default function Dashboard({
             <div className="space-y-4">
               <h4 className="font-medium text-gray-900">Outreach Messages</h4>
               {outreachMessages.map((message, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="border border-gray-200 rounded-xl p-4 animate-slideInLeft"
                   style={{ animationDelay: `${(discussions.length + index) * 300}ms` }}
                 >
@@ -296,7 +296,7 @@ export default function Dashboard({
                   <div className="mb-3">
                     <p className="text-xs font-medium text-gray-700 mb-1">Personalization:</p>
                     <div className="flex flex-wrap gap-1">
-                      {message.personalization.map((variable, i) => (
+                      {message.personalization?.map((variable, i) => (
                         <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                           {variable}
                         </span>
@@ -336,12 +336,12 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-            
+
             <div className="space-y-4">
               <h4 className="font-medium text-gray-900">Social Media & Newsletter Content</h4>
               {inboundContent.map((content, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="border border-gray-200 rounded-xl p-4 animate-slideInRight"
                   style={{ animationDelay: `${index * 400}ms` }}
                 >
