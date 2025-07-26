@@ -216,66 +216,77 @@ function App() {
             setCurrentView('dashboard');
             setAnalysisProgress(prev => ({ ...prev, showResults: true }));
             
+            const actualProblem = result.updatedContext.problemDescription || result.updatedContext.productIdea || 'Product validation challenge';
+            const actualTarget = result.updatedContext.targetAudience || 'General users';
+            
             // Step 0: Initial hypothesis
             const initialHypothesis = `${actualTarget || 'Les utilisateurs cibles'} rencontrent des difficultés significatives avec ${actualProblem || 'le problème identifié'} et seraient prêts à essayer une nouvelle solution si elle répond efficacement à leurs besoins principaux.`;
             setCurrentHypothesis(initialHypothesis);
             
-            // Step 1: Generate problem variations
-            setAnalysisProgress({ step: 'Génération des variations du problème...', progress: 20, completed: [] });
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // Generate and show initial ICPs
-            const initialICPs = [
-              {
-                title: "Early Adopters",
-                description: `Utilisateurs précoces expérimentant ${actualProblem}`,
-                painPoints: ["Recherche active de solutions", "Frustration avec les outils actuels", "Prêt à tester de nouvelles approches"],
-                channels: ["LinkedIn", "Reddit", "Forums spécialisés"]
-              },
-              {
-                title: "Professionnels",
-                description: `${actualTarget} ayant besoin d'une solution professionnelle`,
-                painPoints: ["Outils actuels inefficaces", "Besoin d'intégration workflow", "Recherche de gain de temps"],
-                channels: ["LinkedIn", "Communautés Slack", "Événements sectoriels"]
-              }
-            ];
-            setIcps(initialICPs);
-            
-            // Step 2: Search discussions
-            setAnalysisProgress({ step: 'Recherche de discussions pertinentes...', progress: 40, completed: ['Variations du problème'], showResults: true });
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Step 3: Analyze insights
-            setAnalysisProgress({ step: 'Analyse des insights utilisateurs...', progress: 60, completed: ['Variations du problème', 'Recherche de discussions'], showResults: true });
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // Step 4: Generate content
-            setAnalysisProgress({ step: 'Création du contenu de validation...', progress: 80, completed: ['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs'], showResults: true });
+            // Step 1: Generate quick analysis (ICPs, content, messages)
+            setAnalysisProgress({ step: 'Génération de l\'analyse initiale...', progress: 20, completed: [], showResults: true });
             
             const analysis = await generateMarketAnalysis(result.updatedContext);
             
-            // Update hypothesis based on research findings
-            const evolvedHypothesis = analysis.hypothesis || `Basé sur la recherche: ${actualTarget} montrent un intérêt significatif pour résoudre ${actualProblem}. Les discussions analysées révèlent une demande claire pour une solution qui adresse leurs points de douleur principaux.`;
-            setCurrentHypothesis(evolvedHypothesis);
-            
-            setAnalysisProgress({ step: 'Finalisation de l\'analyse...', progress: 100, completed: ['Variations du problème', 'Recherche de discussions', 'Insights utilisateurs', 'Contenu de validation'], showResults: true });
-            
-            // Progressive display of results
+            // Show ICPs immediately
             setIcps(analysis.icps);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setDiscussions(analysis.discussions);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            setAnalysisProgress({ step: 'ICPs générés, recherche de discussions...', progress: 40, completed: ['Analyse initiale'], showResults: true });
+            
+            // Show inbound content
+            await new Promise(resolve => setTimeout(resolve, 300));
             setInboundContent(analysis.inboundContent);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Show outreach messages
+            await new Promise(resolve => setTimeout(resolve, 300));
             setOutreachMessages(analysis.outreachMessages);
             
-            setIsGeneratingAnalysis(false);
+            setAnalysisProgress({ step: 'Contenu généré, recherche de discussions...', progress: 60, completed: ['Analyse initiale', 'Contenu de validation'], showResults: true });
+            
+            // Step 2: Search discussions with Google Dorks (in parallel)
+            const isB2B = actualTarget.toLowerCase().includes('business') || 
+                          actualTarget.toLowerCase().includes('professional') ||
+                          actualTarget.toLowerCase().includes('company') ||
+                          actualProblem.toLowerCase().includes('saas') ||
+                          actualProblem.toLowerCase().includes('enterprise') ||
+                          actualProblem.toLowerCase().includes('b2b');
+            
+            // Import and run research pipeline for discussions
+            const { runCompleteResearchPipeline } = await import('./services/researchPipeline');
+            
+            // Run research in background and update discussions as they come
+            runCompleteResearchPipeline(actualProblem, actualTarget, isB2B)
+              .then(researchResults => {
+                const realDiscussions = researchResults.discussions.map(d => ({
+                  platform: d.platform,
+                  title: d.title,
+                  url: d.url,
+                  engagement: d.engagement,
+                  relevance: Math.round(d.relevanceScore / 10),
+                  profileUrl: d.profileUrl,
+                  profileName: d.profileName
+                }));
+                
+                setDiscussions(realDiscussions);
+                
+                // Update hypothesis based on research findings
+                const evolvedHypothesis = `Basé sur la recherche: ${actualTarget} montrent un intérêt significatif pour résoudre ${actualProblem}. Les discussions analysées révèlent une demande claire pour une solution qui adresse leurs points de douleur principaux.`;
+                setCurrentHypothesis(evolvedHypothesis);
+                
+                setAnalysisProgress({ step: 'Analyse complète terminée!', progress: 100, completed: ['Analyse initiale', 'Contenu de validation', 'Discussions trouvées', 'Insights générés'], showResults: true });
+                setIsGeneratingAnalysis(false);
+              })
+              .catch(error => {
+                console.error('Research pipeline failed:', error);
+                setAnalysisProgress({ step: 'Analyse terminée (discussions limitées)', progress: 100, completed: ['Analyse initiale', 'Contenu de validation'], showResults: true });
+                setIsGeneratingAnalysis(false);
+              });
+            
           } catch (error) {
             console.error('Analysis generation failed:', error);
             addMessage('ai', 'J\'ai rencontré un problème lors de la génération de l\'analyse complète. Laissez-moi essayer une approche différente.');
             setIsGeneratingAnalysis(false);
           }
-        }, 1000);
+        }, 500); // Reduced delay
       }
     } catch (error) {
       console.error('Error processing idea:', error);

@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 // Model selection based on task complexity and cost optimization
 export const MODELS = {
   // Fast and cheap for simple tasks (conversation, variations)
-  FAST: 'claude-3-haiku-20240307',
+  FAST: 'claude-3-haiku-20240307', // Fastest model - use for everything in Frame 2
   // Balanced for medium complexity (analysis, content generation)  
   BALANCED: 'claude-3-sonnet-20240229',
   // Most capable for complex tasks (deep analysis, research insights)
@@ -244,62 +244,32 @@ export async function generateMarketAnalysis(context: ConversationContext): Prom
                   actualProblem.toLowerCase().includes('enterprise') ||
                   actualProblem.toLowerCase().includes('b2b');
 
-    // Import research pipeline here to avoid circular dependency
-    const { runCompleteResearchPipeline } = await import('./researchPipeline');
-    
-    // Lance le pipeline de recherche complet
-    const researchResults = await runCompleteResearchPipeline(
-      actualProblem,
-      actualTarget,
-      isB2B
-    );
-
-    // Utilise les vraies discussions trouvées
-    const realDiscussions = researchResults.discussions.map(d => ({
-      platform: d.platform,
-      title: d.title,
-      url: d.url,
-      engagement: d.engagement,
-      relevance: Math.round(d.relevanceScore / 10),
-      profileUrl: d.profileUrl,
-      profileName: d.profileName
-    }));
-
-    // Génère les ICPs basés sur les insights réels
-    const icpsFromInsights = researchResults.insights.segments.map((segment, index) => ({
-      title: segment,
-      description: `${segment} experiencing ${researchResults.insights.painPoints[index] || 'the core problem'}`,
-      painPoints: researchResults.insights.painPoints.slice(index, index + 3),
-      channels: isB2B ? ["LinkedIn", "Reddit", "Industry Forums"] : ["Reddit", "Facebook", "Twitter"]
-    }));
-
-    const analysisPrompt = `Based on the following product information, generate a comprehensive market analysis for user research and validation:
+    // Generate quick initial analysis using FAST model
+    const quickAnalysisPrompt = `Generate a quick market analysis for user research:
 
 Product Idea: ${context.productIdea || 'Not specified'}
 Target Audience: ${actualTarget}
 Problem Description: ${actualProblem}
-Resources: ${context.resources?.join(', ') || 'None provided'}
-Research Insights: ${JSON.stringify(researchResults.insights)}
 
-Generate a JSON response with:
-1. "icps": Array of 2-3 detailed ICPs with title, description, painPoints array, and channels array
-2. "discussions": Array of 4-5 realistic discussions from LinkedIn/Reddit/Quora with platform, title, url, engagement, relevance (1-10), profileUrl, profileName
-3. "inboundContent": Array of 4-5 pieces of content for user research (LinkedIn posts, Twitter polls, newsletter content, landing page copy) with type, platform, content, cta
-4. "outreachMessages": Array of 3-4 outreach templates for user research (LinkedIn DM, Reddit comment, cold email) with type, platform, message, personalization array
-5. "hypothesis": Clear hypothesis statement for validation
 
-Focus on USER RESEARCH and VALIDATION content, not sales. The goal is to validate the problem and solution fit.
-Use the research insights to make the content more targeted and relevant.
+
+Generate JSON with:
+- "icps": 2-3 ICPs with title, description, painPoints, channels
+- "inboundContent": 4-5 user research content pieces
+- "outreachMessages": 3-4 outreach templates
+- "hypothesis": Clear validation hypothesis
+
+Focus on USER RESEARCH, not sales.
 Respond in French.
 
 Return ONLY valid JSON, no additional text.`;
 
     const completion = await anthropic.messages.create({
-      model: MODELS.BALANCED, // Use balanced model for analysis
-      max_tokens: 3000,
+      model: MODELS.FAST, // Use fastest model for speed
+      max_tokens: 2000,
       temperature: 0.7,
       system: "You are a market research expert. Generate realistic, actionable market analysis data in JSON format for user research and validation purposes.",
-      messages: [{ role: "user", content: analysisPrompt }]
+      messages: [{ role: "user", content: quickAnalysisPrompt }]
     });
 
     const response = completion.content[0]?.type === 'text' ? completion.content[0].text : '';
@@ -309,10 +279,9 @@ Return ONLY valid JSON, no additional text.`;
       const cleanedResponse = response.replace(/```json\n?|\n?```/g, '').trim();
       const aiGenerated = JSON.parse(cleanedResponse);
       
-      // Combine AI-generated content with real research data
       return {
-        icps: icpsFromInsights.length > 0 ? icpsFromInsights : aiGenerated.icps,
-        discussions: realDiscussions.length > 0 ? realDiscussions : aiGenerated.discussions,
+        icps: aiGenerated.icps || [],
+        discussions: [], // Will be populated by Google Dorks separately
         inboundContent: aiGenerated.inboundContent,
         outreachMessages: aiGenerated.outreachMessages,
         hypothesis: aiGenerated.hypothesis || `${context.targetAudience || 'Target users'} experience significant pain with ${context.problemDescription || 'the current problem'} and would be willing to try ${context.productIdea || 'a new solution'} if it addresses their core needs effectively.`
@@ -322,15 +291,17 @@ Return ONLY valid JSON, no additional text.`;
       const mockData = generateMockAnalysis(context);
       return {
         ...mockData,
-        icps: icpsFromInsights.length > 0 ? icpsFromInsights : mockData.icps,
-        discussions: realDiscussions.length > 0 ? realDiscussions : mockData.discussions
+        discussions: [] // Will be populated separately
       };
     }
 
   } catch (error) {
     console.error('Analysis generation error:', error);
     const mockData = generateMockAnalysis(context);
-    return mockData;
+    return {
+      ...mockData,
+      discussions: [] // Will be populated separately
+    };
   }
 }
 
