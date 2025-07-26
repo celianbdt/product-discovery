@@ -59,8 +59,8 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe your product idea, business concept, or target market..."
               className={`w-full p-6 pr-16 border-2 rounded-2xl resize-none focus:ring-2 focus:ring-black focus:border-black text-lg ${
-                isAnalyzing 
-                  ? 'border-blue-300 bg-blue-50' 
+                isAnalyzing
+                  ? 'border-blue-300 bg-blue-50'
                   : 'border-gray-200'
               }`}
               rows={4}
@@ -84,7 +84,7 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
             </button>
           </div>
         </form>
-        
+
         {/* Resource Upload Section */}
         <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 bg-gray-50">
           <div className="text-center mb-6">
@@ -94,7 +94,7 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
               Upload files or add URLs to help the AI better understand your product
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -112,7 +112,7 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
                 Supports: TXT, DOC, PDF, MD files
               </p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Add URLs
@@ -129,7 +129,7 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
               </p>
             </div>
           </div>
-          
+
           {(urlInput.trim() || fileInputRef.current?.files?.length) && (
             <div className="flex justify-center mt-6">
               <button
@@ -141,23 +141,23 @@ export default function ProductInput({ onResourceUpload, onSubmitIdea, isAnalyzi
             </div>
           )}
         </div>
-        
+
         {isAnalyzing && (
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
-              <span className="text-blue-800 font-medium">AI está analizando tu idea...</span>
+              <span className="text-blue-800 font-medium">AI is analyzing your idea...</span>
             </div>
             <p className="text-blue-600 text-sm text-center mt-2">
-              Esto puede tomar unos segundos
+              This may take a few seconds
             </p>
           </div>
         )}
-        
+
         <p className="text-xs text-gray-500 mt-4 text-center">
           Press Cmd/Ctrl + Enter to analyze your idea
         </p>
       </div>
     </div>
   );
-} 
+}
