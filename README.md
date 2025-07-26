@@ -22,6 +22,7 @@ A comprehensive tool that helps entrepreneurs validate product ideas using AI-po
 - Node.js 18+ 
 - npm or yarn
 - OpenAI API key (optional - uses mock data if not provided)
+- FullEnrich API key (optional - for contact enrichment)
 
 ## 🚀 Quick Start
 
@@ -39,8 +40,9 @@ npm install
 # Copy environment template
 cp env.example .env
 
-# Edit .env file and add your OpenAI API key (optional)
+# Edit .env file and add your API keys (optional)
 OPENAI_API_KEY=your_openai_api_key_here
+FULLENRICH_API_KEY=your_fullenrich_api_key_here
 PORT=3001
 ```
 
@@ -86,7 +88,8 @@ The frontend will run on `http://localhost:5173`
 
 ### 4. Sales Mode
 - Click "Go to Sales" to access prospect generation
-- View enriched prospect lists with contact information
+- Select prospects and enrich their contact information using FullEnrich API
+- View enriched prospect lists with verified emails, phones, and company data
 - Copy sales scripts for different platforms
 
 ### 5. Iteration
@@ -135,12 +138,60 @@ Generates personalized outreach messages.
 ```
 
 ### POST `/api/product_validator/contacts`
-Finds contact information for prospects.
+Finds contact information for prospects using AI.
 
 **Request:**
 ```json
 {
   "targetPersonJSON": "JSON string of person to find"
+}
+```
+
+### POST `/api/product_validator/enrich-contacts`
+Enriches prospect contact information using FullEnrich API.
+
+**Request:**
+```json
+{
+  "prospects": [
+    {
+      "id": "1",
+      "name": "John Doe",
+      "title": "CEO",
+      "company": "Example Corp",
+      "email": "john@example.com",
+      "linkedin": "https://linkedin.com/in/johndoe",
+      "source": "LinkedIn",
+      "relevanceScore": 9
+    }
+  ],
+  "webhookUrl": "https://your-webhook-url.com" // Optional
+}
+```
+
+**Response:**
+```json
+{
+  "enrichment_id": "uuid-string",
+  "message": "Enrichment request submitted successfully",
+  "prospects_count": 1
+}
+```
+
+### GET `/api/product_validator/enrichment-status/:enrichmentId`
+Checks the status of a contact enrichment request.
+
+**Response:**
+```json
+{
+  "enrichment_id": "uuid-string",
+  "status": "completed",
+  "progress": 100,
+  "results": {
+    "enriched_contacts": 1,
+    "failed_contacts": 0,
+    "total_contacts": 1
+  }
 }
 ```
 
@@ -223,6 +274,11 @@ The app uses Tailwind CSS. Customize styles in:
 - Verify API key is set in `.env`
 - Check API key validity
 - Monitor rate limits
+
+**FullEnrich API errors:**
+- Verify FullEnrich API key is set in `.env`
+- Check API key validity and credits
+- Monitor rate limits (max 100 contacts per request)
 
 **No data showing:**
 - Check browser console for errors
