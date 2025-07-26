@@ -21,7 +21,7 @@ export async function analyzeUserInput(
   hasResources: boolean = false
 ): Promise<{ response: string; updatedContext: ConversationContext; shouldProceedToAnalysis: boolean }> {
   
-  const systemPrompt = `You are an AI product validation expert helping entrepreneurs refine their product ideas. Your goal is to gather enough information through 2-3 messages before proceeding to deep analysis.
+  const systemPrompt = `You are an AI product validation expert helping entrepreneurs refine their product ideas. Your goal is to gather enough information through MAXIMUM 3 messages before proceeding to deep analysis.
 
 Current context:
 - Message count: ${context.messageCount}
@@ -32,15 +32,15 @@ Current context:
 - Has problem description: ${!!context.problemDescription}
 
 Guidelines:
-1. If user only provides a vague product idea, ask for more details about the problem they're solving and target audience
-2. If user only provides resources, ask about their specific product concept and target market
-3. If user provides both but lacks clarity on target audience or problem depth, dig deeper
-4. After 2-3 meaningful exchanges, suggest moving to analysis phase
-5. Be conversational, helpful, and focused on gathering actionable insights
+1. MAXIMUM 3 question-answer exchanges allowed
+2. If message count >= 3, ALWAYS proceed to analysis regardless of information completeness
+3. If user only provides a vague product idea, ask for target audience and problem details
+4. If user only provides resources, ask about their product concept and target market
+5. Be conversational and focused on gathering the most critical insights quickly
 6. Don't ask more than 2 questions per response
-7. Show enthusiasm and expertise
+7. After 3 exchanges OR when you have enough info, ALWAYS end with: "I have enough information to start the analysis!"
 
-Respond in a helpful, conversational tone. If you think we have enough information after this exchange, end with: "I think we have enough to start the analysis! Let me dive deep into your market and generate some insights."`;
+Respond in a helpful, conversational tone.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -75,8 +75,8 @@ Respond in a helpful, conversational tone. If you think we have enough informati
     }
 
     // Determine if we should proceed to analysis
-    const shouldProceedToAnalysis = response.includes("I think we have enough to start the analysis!") || 
-                                   (updatedContext.messageCount >= 3 && updatedContext.productIdea && updatedContext.targetAudience);
+    const shouldProceedToAnalysis = response.includes("I have enough information to start the analysis!") || 
+                                   updatedContext.messageCount >= 3;
 
     if (shouldProceedToAnalysis) {
       updatedContext.stage = 'ready_for_analysis';
@@ -107,38 +107,41 @@ export async function generateMarketAnalysis(context: ConversationContext): Prom
   outreachMessages: any[];
   hypothesis: string;
 }> {
-  const analysisPrompt = `Based on the following product information, generate a comprehensive market analysis:
+  const analysisPrompt = `Based on the following product information, generate a comprehensive market analysis for user research and validation:
 
 Product Idea: ${context.productIdea}
 Target Audience: ${context.targetAudience}
 Problem Description: ${context.problemDescription}
 Resources: ${context.resources?.join(', ') || 'None provided'}
 
-Generate:
-1. 2-3 detailed ICPs with pain points and channels
-2. 3-4 relevant discussions (simulate realistic LinkedIn/Reddit/Quora posts)
-3. 4 pieces of inbound content (LinkedIn posts, Twitter polls, newsletter, landing page)
-4. 3 outreach message templates
-5. A clear hypothesis statement
+Generate a JSON response with:
+1. "icps": Array of 2-3 detailed ICPs with title, description, painPoints array, and channels array
+2. "discussions": Array of 4-5 realistic discussions from LinkedIn/Reddit/Quora with platform, title, url, engagement, relevance (1-10), profileUrl, profileName
+3. "inboundContent": Array of 4-5 pieces of content for user research (LinkedIn posts, Twitter polls, newsletter content, landing page copy) with type, platform, content, cta
+4. "outreachMessages": Array of 3-4 outreach templates for user research (LinkedIn DM, Reddit comment, cold email) with type, platform, message, personalization array
+5. "hypothesis": Clear hypothesis statement for validation
 
-Format as JSON with the exact structure expected by the frontend.`;
+Focus on USER RESEARCH and VALIDATION content, not sales. The goal is to validate the problem and solution fit.
+
+Return ONLY valid JSON, no additional text.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a market research expert. Generate realistic, actionable market analysis data in JSON format." },
+        { role: "system", content: "You are a market research expert. Generate realistic, actionable market analysis data in JSON format for user research and validation purposes." },
         { role: "user", content: analysisPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 3000
     });
 
     const response = completion.choices[0]?.message?.content || '';
     
     // Parse the JSON response or return mock data if parsing fails
     try {
-      return JSON.parse(response);
+      const cleanedResponse = response.replace(/```json\n?|\n?```/g, '').trim();
+      return JSON.parse(cleanedResponse);
     } catch {
       // Return structured mock data if JSON parsing fails
       return generateMockAnalysis(context);
@@ -154,43 +157,101 @@ function generateMockAnalysis(context: ConversationContext) {
   return {
     icps: [
       {
-        title: "Primary Target Segment",
-        description: `Based on your product idea: ${context.productIdea?.substring(0, 100)}...`,
+        title: "Early Adopter Segment",
+        description: `Tech-savvy users experiencing the core problem you're solving`,
         painPoints: [
-          "Main challenge identified from your description",
-          "Secondary pain point in the market",
-          "Opportunity for improvement"
+          "Struggling with current solutions",
+          "Actively seeking alternatives",
+          "Willing to try new approaches"
         ],
-        channels: ["LinkedIn", "Industry Forums", "Direct Outreach"]
+        channels: ["LinkedIn", "Reddit", "Twitter", "Industry Forums"]
+      },
+      {
+        title: "Professional Users",
+        description: `Business professionals who need this solution for work`,
+        painPoints: [
+          "Current tools are inefficient",
+          "Need better workflow integration",
+          "Looking for time-saving solutions"
+        ],
+        channels: ["LinkedIn", "Slack Communities", "Industry Events"]
       }
     ],
     discussions: [
       {
         platform: "LinkedIn",
-        title: "Discussion related to your product space",
-        url: "https://linkedin.com/posts/example",
-        engagement: "25 comments, 80 likes",
+        title: "Anyone else frustrated with current solutions for this problem?",
+        url: "https://linkedin.com/posts/example-post",
+        engagement: "45 comments, 120 likes",
         relevance: 8,
-        profileUrl: "https://linkedin.com/in/potential-customer",
-        profileName: "Potential Customer"
+        profileUrl: "https://linkedin.com/in/potential-user",
+        profileName: "Sarah Chen"
+      },
+      {
+        platform: "Reddit",
+        title: "What tools do you use for [related problem]?",
+        url: "https://reddit.com/r/productivity/comments/example",
+        engagement: "67 upvotes, 34 comments",
+        relevance: 9,
+        profileUrl: "https://reddit.com/user/productivityguru",
+        profileName: "ProductivityGuru"
+      },
+      {
+        platform: "Twitter",
+        title: "Hot take: Current solutions for X are broken",
+        url: "https://twitter.com/user/status/example",
+        engagement: "89 likes, 23 retweets",
+        relevance: 7,
+        profileUrl: "https://twitter.com/techfounder",
+        profileName: "TechFounder"
       }
     ],
     inboundContent: [
       {
         type: "LinkedIn Post",
         platform: "LinkedIn",
-        content: `What if there was a solution for ${context.problemDescription?.substring(0, 50)}...?\n\nDrop a comment if this resonates with you 👇`,
-        cta: "Comment your thoughts"
+        content: `I'm researching a common problem many of us face...\n\nHow do you currently handle [specific problem]? What's your biggest frustration?\n\nBuilding something to solve this - would love your input! 👇`,
+        cta: "Comment with your experience"
+      },
+      {
+        type: "Twitter Poll",
+        platform: "Twitter",
+        content: `Quick poll for my network:\n\nWhat's your biggest challenge with [problem area]?\n\nA) Current tools are too complex\nB) Too expensive\nC) Missing key features\nD) Poor user experience`,
+        cta: "Vote and share your thoughts"
+      },
+      {
+        type: "Newsletter Content",
+        platform: "Email",
+        content: `Subject: Quick question about [problem area]\n\nHi [Name],\n\nI'm researching challenges in [problem space] and would love 2 minutes of your time.\n\nWhat's your current approach to [specific problem]? What works? What doesn't?\n\nBuilding something to help - your insights would be invaluable.`,
+        cta: "Reply with your thoughts"
+      },
+      {
+        type: "Landing Page",
+        platform: "Website",
+        content: `Are you tired of [problem description]?\n\nWe're building a solution and want to hear from you.\n\nShare your experience and be the first to know when we launch.`,
+        cta: "Join our research community"
       }
     ],
     outreachMessages: [
       {
-        type: "LinkedIn DM",
+        type: "LinkedIn Comment",
         platform: "LinkedIn",
-        message: `Hi {firstName},\n\nI noticed your interest in ${context.productIdea?.substring(0, 30)}... Would love to get your thoughts on something I'm building.\n\nMind if I share a quick demo?`,
-        personalization: ["{firstName}", "{company}"]
+        message: `Great point about {specificPain}! I'm actually researching this exact problem. Would love to hear more about your experience - mind if I DM you a couple quick questions?`,
+        personalization: ["{specificPain}", "{firstName}"]
+      },
+      {
+        type: "Reddit Comment",
+        platform: "Reddit",
+        message: `This resonates! I'm building something to solve this exact problem. Would you be open to a quick 5-minute chat about your experience? Happy to share early access in return for feedback.`,
+        personalization: ["{username}", "{specificContext}"]
+      },
+      {
+        type: "Cold Email",
+        platform: "Email",
+        message: `Hi {firstName},\n\nSaw your post about {specificTopic} and it really resonated.\n\nI'm researching this problem space and would love 5 minutes of your time to understand your experience better.\n\nWould you be open to a quick call this week?`,
+        personalization: ["{firstName}", "{specificTopic}", "{company}"]
       }
     ],
-    hypothesis: `${context.targetAudience} struggle with ${context.problemDescription} and would benefit from ${context.productIdea}.`
+    hypothesis: `${context.targetAudience || 'Target users'} experience significant pain with ${context.problemDescription || 'the current problem'} and would be willing to try ${context.productIdea || 'a new solution'} if it addresses their core needs effectively.`
   };
 }

@@ -169,6 +169,7 @@ function App() {
       
       if (result.shouldProceedToAnalysis) {
         // Generate full market analysis
+        addMessage('ai', 'Perfect! I have enough information. Let me analyze your market and generate validation strategies...');
         setTimeout(async () => {
           try {
             const analysis = await generateMarketAnalysis(result.updatedContext);
