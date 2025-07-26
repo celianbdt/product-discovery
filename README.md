@@ -17,7 +17,8 @@ A comprehensive tool that helps entrepreneurs validate product ideas using AI-po
 - **AI**: OpenAI GPT-4 API
 - **Icons**: Lucide React
 
-## 📋 Prerequisites
+## 📋 Prerequisites holaaaaaaaa
+
 
 - Node.js 18+ 
 - npm or yarn
