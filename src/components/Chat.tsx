@@ -49,7 +49,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 ? (

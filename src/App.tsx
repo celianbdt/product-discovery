@@ -60,114 +60,28 @@ interface SalesContent {
   personalization: string[];
 }
 
+interface ValidationResponse {
+  discussions?: any[];
+  people?: any[];
+  insights?: any;
+  raw?: string;
+}
+
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentView, setCurrentView] = useState<'chat' | 'dashboard' | 'sales'>('chat');
   const [showIterateModal, setShowIterateModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [validationData, setValidationData] = useState<ValidationResponse | null>(null);
 
-  // Mock data for demonstration
-  const [icps] = useState<ICP[]>([
-    {
-      title: "B2B SaaS Founders (Series A)",
-      description: "Technology entrepreneurs who have proven product-market fit and are scaling their teams",
-      painPoints: [
-        "Difficulty validating new product features",
-        "Limited time for market research",
-        "Need faster customer feedback loops"
-      ],
-      channels: ["LinkedIn", "Product Hunt", "YC Network", "SaaS communities"]
-    },
-    {
-      title: "Solo Entrepreneurs & Indie Hackers",
-      description: "Individual builders creating digital products and services",
-      painPoints: [
-        "Working in isolation without validation",
-        "Limited resources for market research",
-        "Need validation before building"
-      ],
-      channels: ["Twitter", "Indie Hackers", "Reddit", "Hacker News"]
-    }
-  ]);
+  // State for API data
+  const [icps, setIcps] = useState<ICP[]>([]);
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [inboundContent, setInboundContent] = useState<InboundContent[]>([]);
+  const [outreachMessages, setOutreachMessages] = useState<OutreachMessage[]>([]);
+  const [currentHypothesis, setCurrentHypothesis] = useState('');
 
-  const [discussions] = useState<Discussion[]>([
-    {
-      platform: "LinkedIn",
-      title: "Struggling to validate my B2B SaaS idea - any frameworks?",
-      url: "https://linkedin.com/posts/example1",
-      engagement: "45 comments, 120 likes",
-      relevance: 9,
-      profileUrl: "https://linkedin.com/in/sarah-chen-founder",
-      profileName: "Sarah Chen"
-    },
-    {
-      platform: "Reddit",
-      title: "How do you validate a product idea without building it?",
-      url: "https://reddit.com/r/entrepreneur/example",
-      engagement: "78 comments, 200 upvotes",
-      relevance: 8,
-      profileUrl: "https://reddit.com/user/marcus_builds",
-      profileName: "u/marcus_builds"
-    },
-    {
-      platform: "Quora",
-      title: "What's the best way to find your ideal customer profile?",
-      url: "https://quora.com/example-question",
-      engagement: "12 answers, 50 follows",
-      relevance: 7,
-      profileUrl: "https://quora.com/profile/Emma-Thompson-Entrepreneur",
-      profileName: "Emma Thompson"
-    }
-  ]);
-
-  const [inboundContent] = useState<InboundContent[]>([
-    {
-      type: "LinkedIn Post",
-      platform: "LinkedIn",
-      content: "Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.",
-      cta: "Comment your biggest validation challenge"
-    },
-    {
-      type: "X/Twitter Poll",
-      platform: "Twitter",
-      content: "Quick poll for founders 📊\n\nWhat do you wish existed to help validate your product ideas faster?\n\nA) AI-powered market research\nB) Instant customer feedback loops  \nC) Automated competitor analysis\nD) All of the above",
-      cta: "Vote and RT for reach"
-    },
-    {
-      type: "Newsletter",
-      platform: "Email",
-      content: "Subject: The #1 mistake founders make when validating ideas\n\nHey [Name],\n\nI've been analyzing 100+ failed startups, and there's one pattern that keeps showing up...\n\nThey all skipped proper market validation.\n\nHere's what successful founders do differently:\n\n1. They talk to customers BEFORE building\n2. They test multiple ICPs simultaneously  \n3. They use data, not assumptions\n\nWant to avoid this costly mistake? I'm building an AI tool that helps you validate ideas in minutes, not months.\n\nInterested in early access?",
-      cta: "Reply 'YES' for early access"
-    },
-    {
-      type: "Landing Page",
-      platform: "Website",
-      content: "Get AI-powered insights to validate your product ideas in minutes, not months. Join 500+ founders who are building smarter.",
-      cta: "Join the waitlist"
-    }
-  ]);
-
-  const [outreachMessages] = useState<OutreachMessage[]>([
-    {
-      type: "LinkedIn DM",
-      platform: "LinkedIn",
-      message: "Hi {firstName},\n\nI saw your post about {specificProblem} and found your perspective really insightful.\n\nI'm working on something that might interest you - an AI tool that helps founders validate product ideas and find their ICP in minutes rather than months.\n\nWould love to get your thoughts on this. Mind if I send you a quick demo?",
-      personalization: ["{firstName}", "{specificProblem}", "{company}"]
-    },
-    {
-      type: "Reddit Comment",
-      platform: "Reddit",
-      message: "Great question! I've been researching this exact problem and found that most founders struggle with validation because they don't have a systematic approach.\n\nI'm actually building an AI agent that analyzes your product idea and generates validation strategies automatically. Would love to show you how it works if you're interested.\n\nFeel free to DM me if you'd like to see a demo!",
-      personalization: ["{username}", "{specificContext}"]
-    },
-    {
-      type: "Cold Email",
-      platform: "Email",
-      message: "Subject: Quick question about {company}'s validation process\n\nHi {firstName},\n\nI came across your discussion on {platform} about {specificPain} and found your insights valuable.\n\nI'm building an AI tool that helps founders like you validate ideas faster. We've helped 200+ founders achieve:\n\n• 40% faster validation cycles\n• 3x more accurate ICP identification\n• Automated market research\n\nWould you be open to a 15-minute demo this week? I'd love to show you how it works and get your feedback.\n\nBest,\n[Your Name]",
-      personalization: ["{firstName}", "{company}", "{platform}", "{specificPain}"]
-    }
-  ]);
-
+  // Mock data for sales mode (will be enhanced later)
   const [prospects] = useState<Prospect[]>([
     {
       name: "Sarah Chen",
@@ -220,10 +134,6 @@ function App() {
     }
   ]);
 
-  const [currentHypothesis] = useState(
-    "B2B SaaS founders and indie hackers struggle with product validation due to time constraints and lack of structured frameworks. They need an AI-powered tool that can quickly analyze their ideas, identify target markets, and generate validation content to test hypotheses efficiently."
-  );
-
   const handleResourceUpload = (files: FileList | null, urls: string[]) => {
     const resourceInfo = [];
     if (files && files.length > 0) {
@@ -239,18 +149,104 @@ function App() {
     }
   };
 
-  const handleSubmitIdea = (idea: string) => {
+  const handleSubmitIdea = async (idea: string) => {
     addMessage('user', idea);
     setIsAnalyzing(true);
     
-    // Simulate AI analysis
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:3001/api/product_validator/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productIdea: idea,
+          context: undefined,
+          resourcesJSON: undefined
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setValidationData(data);
+      
+      // Transform API data to match our interfaces
+      if (data.discussions) {
+        const transformedDiscussions: Discussion[] = data.discussions.map((discussion: any) => ({
+          platform: discussion.platform,
+          title: discussion.title,
+          url: discussion.url,
+          engagement: `${discussion.relevance}% relevance`,
+          relevance: discussion.relevance,
+          profileUrl: discussion.url,
+          profileName: discussion.author
+        }));
+        setDiscussions(transformedDiscussions);
+      }
+
+      // Generate ICPs from insights
+      if (data.insights) {
+        const generatedIcps: ICP[] = [
+          {
+            title: "Primary Target Market",
+            description: data.insights.marketDemand || "Identified target market based on analysis",
+            painPoints: data.insights.commonPainPoints || ["Time constraints", "Lack of systematic approach"],
+            channels: data.insights.bestChannels || ["LinkedIn", "Reddit", "Twitter"]
+          }
+        ];
+        setIcps(generatedIcps);
+      }
+
+      // Generate hypothesis from insights
+      if (data.insights) {
+        const hypothesis = `${data.insights.marketDemand || 'Target market'} struggles with ${data.insights.commonPainPoints?.join(', ') || 'validation challenges'}. They need an AI-powered tool that can quickly analyze ideas, identify target markets, and generate validation content.`;
+        setCurrentHypothesis(hypothesis);
+      }
+
+      // Generate inbound content from insights
+      if (data.insights) {
+        const generatedInboundContent: InboundContent[] = [
+          {
+            type: "LinkedIn Post",
+            platform: "LinkedIn",
+            content: `Building something new? I'm curious - what's the biggest challenge you face when validating a new product idea?\n\nDrop a comment below 👇 I'm researching this space and would love to hear your thoughts.`,
+            cta: "Comment your biggest validation challenge"
+          },
+          {
+            type: "X/Twitter Poll",
+            platform: "Twitter",
+            content: `Quick poll for founders 📊\n\nWhat do you wish existed to help validate your product ideas faster?\n\nA) AI-powered market research\nB) Instant customer feedback loops  \nC) Automated competitor analysis\nD) All of the above`,
+            cta: "Vote and RT for reach"
+          }
+        ];
+        setInboundContent(generatedInboundContent);
+      }
+
+      // Generate outreach messages
+      if (data.people && data.people.length > 0) {
+        const generatedOutreachMessages: OutreachMessage[] = data.people.map((person: any) => ({
+          type: "Personalized DM",
+          platform: person.platform,
+          message: `Hi there! I noticed your post about ${person.problem} and thought our AI-powered validation tool might be exactly what you're looking for. Would love to show you a quick demo if you're interested!`,
+          personalization: ["{firstName}", "{specificProblem}", "{platform}"]
+        }));
+        setOutreachMessages(generatedOutreachMessages);
+      }
+      
       addMessage('ai', 
-        'Excellent! I\'ve analyzed your product idea and resources. Based on my analysis, I\'ve identified potential ICPs, found relevant market discussions, and generated validation content.\n\nI recommend starting with the B2B SaaS founders segment - they show the highest engagement and clearest pain points around product validation.\n\nCheck out the dashboard to see detailed insights and start your validation journey!'
+        'Excellent! I\'ve analyzed your product idea and resources. Based on my analysis, I\'ve identified potential ICPs, found relevant market discussions, and generated validation content.\n\nI recommend starting with the primary target market - they show the highest engagement and clearest pain points around product validation.\n\nCheck out the dashboard to see detailed insights and start your validation journey!'
       );
-      setIsAnalyzing(false);
+      
       setCurrentView('dashboard');
-    }, 3000);
+    } catch (error) {
+      console.error('Error calling validation API:', error);
+      addMessage('ai', 'Sorry, there was an error analyzing your idea. Please try again or check if the server is running.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const addMessage = (type: 'user' | 'ai', content: string) => {
@@ -273,7 +269,7 @@ function App() {
     
     setTimeout(() => {
       addMessage('ai', 
-        'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The fintech angle seems promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
+        'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
       );
       setIsAnalyzing(false);
     }, 2000);
@@ -288,7 +284,7 @@ function App() {
       hypothesis: currentHypothesis,
       icps,
       discussions,
-      validationContent,
+      validationContent: inboundContent,
       timestamp: new Date().toISOString()
     };
     
