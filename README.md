@@ -1,5 +1,6 @@
 # AI Product Validator & Sales Launcher
 
+
 A comprehensive tool that helps entrepreneurs validate product ideas using AI-powered market research and generates personalized outreach content.
 
 ## 🚀 Features
