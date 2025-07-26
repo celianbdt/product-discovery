@@ -609,6 +609,6 @@ app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`🔑 OpenAI API key: ${hasValidOpenAIKey ? '✅ Set' : '❌ Missing (using mock data)'}`);
   console.log(`🔑 FullEnrich API key: ${hasValidFullEnrichKey ? '✅ Set' : '❌ Missing (using mock data)'}`);
-  console.log(`📊 Health check: http://localhost:${port}/health`);
-  console.log(`🧪 Test endpoint: http://localhost:${port}/api/test`);
+  console.log(`📊 Health check: https://product-discovery-production.up.railway.app/health`);
+  console.log(`🧪 Test endpoint: https://product-discovery-production.up.railway.app/api/test`);
 }); 

@@ -194,7 +194,7 @@ function App() {
     setIsAnalyzing(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/product_validator/validate', {
+      const response = await fetch('https://product-discovery-production.up.railway.app/api/product_validator/validate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -266,7 +266,7 @@ function App() {
       // Generate inbound content from insights
       if (data.insights) {
         try {
-          const inboundResponse = await fetch('http://localhost:3001/api/product_validator/inbound-content', {
+          const inboundResponse = await fetch('https://product-discovery-production.up.railway.app/api/product_validator/inbound-content', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -420,7 +420,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/product_validator/enrich-contacts', {
+      const response = await fetch('https://product-discovery-production.up.railway.app/api/product_validator/enrich-contacts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
