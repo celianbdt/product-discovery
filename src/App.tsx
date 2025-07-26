@@ -1,4 +1,3 @@
-import Chat from './components/Chat';
 import React, { useState } from 'react';
 import ProductInput from './components/ProductInput';
 import Dashboard from './components/Dashboard';
@@ -330,6 +329,16 @@ function App() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const addMessage = (type: 'user' | 'ai', content: string) => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      type,
+      content,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, newMessage]);
   };
 
   const handleIterate = () => {
