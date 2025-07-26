@@ -58,7 +58,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
               AI Product Validator & Sales Launcher
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Describe your product idea or paste your resources. I'll help you validate your ICP, 
+              Describe your product idea or paste your resources. I'll help you validate your ICP,
               find relevant discussions, and create content to test your hypotheses.
             </p>
           </div>
@@ -155,7 +155,8 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                   className="w-full p-3 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-black focus:border-black"
                   rows={1}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
                       handleSubmit(e);
                     }
                   }}
@@ -181,7 +182,8 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                     className="w-full p-6 pr-16 border-2 border-gray-200 rounded-2xl resize-none focus:ring-2 focus:ring-black focus:border-black text-lg"
                     rows={4}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
                         handleSubmit(e);
                       }
                     }}
@@ -195,7 +197,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                   </button>
                 </div>
               </form>
-              
+
               {/* Resource Upload Section */}
               <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 bg-gray-50">
                 <div className="text-center mb-6">
@@ -205,7 +207,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                     Upload files or add URLs to help the AI better understand your product
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -223,7 +225,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                       Supports: TXT, DOC, PDF, MD files
                     </p>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Add URLs
@@ -240,7 +242,7 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                     </p>
                   </div>
                 </div>
-                
+
                 {(urlInput.trim() || fileInputRef.current?.files?.length) && (
                   <div className="flex justify-center mt-6">
                     <button
@@ -252,9 +254,9 @@ export default function Chat({ onResourceUpload, onSubmitIdea, messages }: ChatP
                   </div>
                 )}
               </div>
-              
+
               <p className="text-xs text-gray-500 mt-4 text-center">
-                Press Cmd/Ctrl + Enter to analyze your idea
+                Press Enter to analyze your idea • Shift + Enter for new line
               </p>
             </>
           )}
