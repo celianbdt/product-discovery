@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Chat from './components/Chat';
 import Dashboard from './components/Dashboard';
 import IterateModal from './components/IterateModal';
 import SalesMode from './components/SalesMode';
+import LandingPage from './components/LandingPage';
 
 interface Message {
   id: string;
@@ -68,6 +69,7 @@ interface ValidationResponse {
 }
 
 function App() {
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentView, setCurrentView] = useState<'chat' | 'dashboard' | 'sales'>('chat');
   const [showIterateModal, setShowIterateModal] = useState(false);
@@ -142,7 +144,7 @@ function App() {
     if (urls.length > 0) {
       resourceInfo.push(`${urls.length} URL(s) added`);
     }
-    
+
     if (resourceInfo.length > 0) {
       addMessage('user', `Resources added: ${resourceInfo.join(', ')}`);
       addMessage('ai', 'Resources received! I\'ll analyze these along with your product idea. Please describe your product concept or business idea.');
@@ -152,7 +154,7 @@ function App() {
   const handleSubmitIdea = async (idea: string) => {
     addMessage('user', idea);
     setIsAnalyzing(true);
-    
+
     try {
       const response = await fetch('http://localhost:3001/api/product_validator/validate', {
         method: 'POST',
@@ -172,7 +174,7 @@ function App() {
 
       const data = await response.json();
       setValidationData(data);
-      
+
       // Transform API data to match our interfaces
       if (data.discussions) {
         const transformedDiscussions: Discussion[] = data.discussions.map((discussion: any) => ({
@@ -235,11 +237,11 @@ function App() {
         }));
         setOutreachMessages(generatedOutreachMessages);
       }
-      
-      addMessage('ai', 
+
+      addMessage('ai',
         'Excellent! I\'ve analyzed your product idea and resources. Based on my analysis, I\'ve identified potential ICPs, found relevant market discussions, and generated validation content.\n\nI recommend starting with the primary target market - they show the highest engagement and clearest pain points around product validation.\n\nCheck out the dashboard to see detailed insights and start your validation journey!'
       );
-      
+
       setCurrentView('dashboard');
     } catch (error) {
       console.error('Error calling validation API:', error);
@@ -266,9 +268,9 @@ function App() {
   const handleIterateSubmit = (learnings: string) => {
     addMessage('user', `Iteration learnings: ${learnings}`);
     setIsAnalyzing(true);
-    
+
     setTimeout(() => {
-      addMessage('ai', 
+      addMessage('ai',
         'Thanks for the feedback! Based on your learnings, I\'ve updated the hypothesis and generated new validation strategies. The insights seem promising - I\'ve identified new discussions and created targeted content for that segment.\n\nCheck the updated dashboard for fresh insights!'
       );
       setIsAnalyzing(false);
@@ -287,7 +289,7 @@ function App() {
       validationContent: inboundContent,
       timestamp: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -300,6 +302,14 @@ function App() {
   const handleBackToAnalysis = () => {
     setCurrentView('dashboard');
   };
+
+  const handleGetStarted = () => {
+    setShowLandingPage(false);
+  };
+
+  if (showLandingPage) {
+    return <LandingPage onGetStarted={handleGetStarted} />;
+  }
 
   if (currentView === 'sales') {
     return (
