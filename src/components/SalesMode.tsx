@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Mail, MessageCircle, Phone, Users, Download, Copy, Check } from 'lucide-react';
 
 interface Prospect {
+  id?: string;
   name: string;
   title: string;
   company: string;
@@ -9,6 +10,16 @@ interface Prospect {
   linkedin: string;
   source: string;
   relevanceScore: number;
+  enriched?: {
+    email?: string;
+    phone?: string;
+    company_email?: string;
+    company_phone?: string;
+    company_website?: string;
+    linkedin_url?: string;
+    twitter_url?: string;
+    confidence_score?: number;
+  };
 }
 
 interface SalesContent {
@@ -23,11 +34,13 @@ interface SalesModeProps {
   onBack: () => void;
   prospects: Prospect[];
   salesContent: SalesContent[];
+  onEnrichProspects: (selectedProspects: Prospect[]) => Promise<void>;
 }
 
-export default function SalesMode({ onBack, prospects, salesContent }: SalesModeProps) {
+export default function SalesMode({ onBack, prospects, salesContent, onEnrichProspects }: SalesModeProps) {
   const [copiedContent, setCopiedContent] = useState<string | null>(null);
   const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
+  const [isEnriching, setIsEnriching] = useState(false);
 
   const copyToClipboard = (content: string, id: string) => {
     navigator.clipboard.writeText(content);
@@ -59,6 +72,23 @@ export default function SalesMode({ onBack, prospects, salesContent }: SalesMode
     URL.revokeObjectURL(url);
   };
 
+  const handleEnrichSelected = async () => {
+    if (selectedProspects.length === 0) {
+      alert('Please select at least one prospect to enrich');
+      return;
+    }
+
+    setIsEnriching(true);
+    try {
+      const selectedProspectsData = prospects.filter(p => selectedProspects.includes(p.email));
+      await onEnrichProspects(selectedProspectsData);
+    } catch (error) {
+      console.error('Error enriching prospects:', error);
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -75,14 +105,28 @@ export default function SalesMode({ onBack, prospects, salesContent }: SalesMode
             <div className="h-6 w-px bg-gray-300" />
             <h1 className="text-xl font-semibold text-gray-900">Sales Mode</h1>
           </div>
-          <button
-            onClick={exportProspects}
-            disabled={selectedProspects.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download size={16} />
-            <span>Export Selected ({selectedProspects.length})</span>
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleEnrichSelected}
+              disabled={selectedProspects.length === 0 || isEnriching}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isEnriching ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <Users size={16} />
+              )}
+              <span>{isEnriching ? 'Enriching...' : `Enrich Selected (${selectedProspects.length})`}</span>
+            </button>
+            <button
+              onClick={exportProspects}
+              disabled={selectedProspects.length === 0}
+              className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={16} />
+              <span>Export Selected ({selectedProspects.length})</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -199,15 +243,18 @@ export default function SalesMode({ onBack, prospects, salesContent }: SalesMode
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span>Source: {prospect.source}</span>
                     <div className="flex space-x-2">
+                      {prospect.enriched?.email && (
+                        <span className="text-green-600 font-medium">✓ Enriched</span>
+                      )}
                       <a
-                        href={`mailto:${prospect.email}`}
+                        href={`mailto:${prospect.enriched?.email || prospect.email}`}
                         className="text-blue-600 hover:text-blue-800"
                         onClick={(e) => e.stopPropagation()}
                       >
                         Email
                       </a>
                       <a
-                        href={prospect.linkedin}
+                        href={prospect.enriched?.linkedin_url || prospect.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800"
@@ -217,6 +264,39 @@ export default function SalesMode({ onBack, prospects, salesContent }: SalesMode
                       </a>
                     </div>
                   </div>
+                  
+                  {prospect.enriched && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        {prospect.enriched.phone && (
+                          <div>
+                            <span className="font-medium text-green-700">Phone:</span>
+                            <span className="text-green-600 ml-1">{prospect.enriched.phone}</span>
+                          </div>
+                        )}
+                        {prospect.enriched.company_website && (
+                          <div>
+                            <span className="font-medium text-green-700">Website:</span>
+                            <a 
+                              href={prospect.enriched.company_website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-green-600 ml-1 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Visit
+                            </a>
+                          </div>
+                        )}
+                        {prospect.enriched.confidence_score && (
+                          <div className="col-span-2">
+                            <span className="font-medium text-green-700">Confidence:</span>
+                            <span className="text-green-600 ml-1">{prospect.enriched.confidence_score}%</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
